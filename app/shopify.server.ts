@@ -51,6 +51,17 @@ const shopify = shopifyApp({
   },
   hooks: {
     afterAuth: async ({ session }) => {
+      // Upsert Shop record so sub-routes can find it
+      const { db } = await import("./db.server");
+      await db.shop.upsert({
+        where: { shopDomain: session.shop },
+        update: { accessToken: session.accessToken || "", isActive: true },
+        create: {
+          shopDomain: session.shop,
+          accessToken: session.accessToken || "",
+          isActive: true,
+        },
+      });
       await shopify.registerWebhooks({ session });
     },
   },
