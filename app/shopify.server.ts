@@ -3,9 +3,7 @@ import {
   DeliveryMethod,
   ApiVersion,
 } from "@shopify/shopify-app-remix/server";
-import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
-
-import { db } from "./db.server";
+import { customSessionStorage } from "./session-storage.server";
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY!,
@@ -15,10 +13,12 @@ const shopify = shopifyApp({
   apiVersion: ApiVersion.October24,
   isEmbeddedApp: true,
   authPathPrefix: "/auth",
-  sessionStorage: new PrismaSessionStorage(db, {
-    tableName: "session",
-  }),
+  sessionStorage: customSessionStorage,
   useOnlineTokens: false,
+  future: {
+    unstable_newEmbeddedAuthStrategy: true,
+    removeRest: true,
+  },
   webhooks: {
     APP_UNINSTALLED: {
       deliveryMethod: DeliveryMethod.Http,
@@ -28,31 +28,11 @@ const shopify = shopifyApp({
       deliveryMethod: DeliveryMethod.Http,
       callbackUrl: "/api/webhooks",
     },
-    ORDERS_UPDATED: {
-      deliveryMethod: DeliveryMethod.Http,
-      callbackUrl: "/api/webhooks",
-    },
     ORDERS_FULFILLED: {
       deliveryMethod: DeliveryMethod.Http,
       callbackUrl: "/api/webhooks",
     },
     ORDERS_PAID: {
-      deliveryMethod: DeliveryMethod.Http,
-      callbackUrl: "/api/webhooks",
-    },
-    CUSTOMERS_CREATE: {
-      deliveryMethod: DeliveryMethod.Http,
-      callbackUrl: "/api/webhooks",
-    },
-    CUSTOMERS_UPDATE: {
-      deliveryMethod: DeliveryMethod.Http,
-      callbackUrl: "/api/webhooks",
-    },
-    CHECKOUTS_CREATE: {
-      deliveryMethod: DeliveryMethod.Http,
-      callbackUrl: "/api/webhooks",
-    },
-    CHECKOUTS_UPDATE: {
       deliveryMethod: DeliveryMethod.Http,
       callbackUrl: "/api/webhooks",
     },
@@ -71,7 +51,6 @@ const shopify = shopifyApp({
   },
   hooks: {
     afterAuth: async ({ session }) => {
-      // Register webhooks for the shop after authentication
       await shopify.registerWebhooks({ session });
     },
   },
