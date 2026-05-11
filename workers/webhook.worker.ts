@@ -252,8 +252,8 @@ async function handleOrderFulfilled(shopId: string, payload: Record<string, unkn
     return
   }
 
-  // Default delay: 7 days
-  const REVIEW_REQUEST_DELAY_MS = 7 * 24 * 60 * 60 * 1000
+  // Default delay: 2 minutes (TESTING — change back to 7 days for production: 7 * 24 * 60 * 60 * 1000)
+  const REVIEW_REQUEST_DELAY_MS = 2 * 60 * 1000
 
   // Create ReviewRequest record with status "pending"
   const reviewRequest = await db.reviewRequest.create({
