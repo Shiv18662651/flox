@@ -1,0 +1,217 @@
+{% comment %}
+  Loyalty Points - Shopify Theme App Extension
+  Displays customer point balance and available reward value on storefront.
+  Requirements: 8.7, 8.9
+{% endcomment %}
+
+<div id="nexify-loyalty-widget" class="nexify-loyalty" style="display: none;">
+  <div class="nexify-loyalty__card">
+    <div class="nexify-loyalty__header">
+      <span class="nexify-loyalty__icon">⭐</span>
+      <span class="nexify-loyalty__title">Your Rewards</span>
+    </div>
+    <div class="nexify-loyalty__body">
+      <div class="nexify-loyalty__points">
+        <span class="nexify-loyalty__points-value" id="nexify-loyalty-points">0</span>
+        <span class="nexify-loyalty__points-label">Points</span>
+      </div>
+      <div class="nexify-loyalty__reward">
+        <span class="nexify-loyalty__reward-label">Available reward:</span>
+        <span class="nexify-loyalty__reward-value" id="nexify-loyalty-reward">$0.00</span>
+      </div>
+      <div class="nexify-loyalty__tier" id="nexify-loyalty-tier" style="display: none;">
+        <span class="nexify-loyalty__tier-badge" id="nexify-loyalty-tier-name"></span>
+      </div>
+    </div>
+
+    <!-- Referral Sharing Section - Requirements: 11.8 -->
+    <div class="nexify-loyalty__referral" id="nexify-referral-section" style="display: none;">
+      <div class="nexify-loyalty__referral-divider"></div>
+      <div class="nexify-loyalty__referral-header">
+        <span class="nexify-loyalty__referral-icon">🎁</span>
+        <span class="nexify-loyalty__referral-title">Refer a Friend</span>
+      </div>
+      <p class="nexify-loyalty__referral-desc" id="nexify-referral-desc">
+        Share your link and earn rewards!
+      </p>
+      <div class="nexify-loyalty__referral-link-box">
+        <input
+          type="text"
+          id="nexify-referral-link"
+          class="nexify-loyalty__referral-input"
+          readonly
+          aria-label="Your referral link"
+        />
+        <button
+          id="nexify-referral-copy"
+          class="nexify-loyalty__referral-btn"
+          aria-label="Copy referral link"
+          title="Copy link"
+        >📋</button>
+      </div>
+      <div class="nexify-loyalty__referral-share">
+        <button id="nexify-referral-email" class="nexify-loyalty__share-btn nexify-loyalty__share-btn--email" aria-label="Share via email" title="Share via email">✉️ Email</button>
+        <button id="nexify-referral-whatsapp" class="nexify-loyalty__share-btn nexify-loyalty__share-btn--whatsapp" aria-label="Share via WhatsApp" title="Share via WhatsApp">💬 WhatsApp</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .nexify-loyalty__card {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 16px;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    max-width: 300px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  .nexify-loyalty__header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .nexify-loyalty__icon {
+    font-size: 20px;
+  }
+  .nexify-loyalty__title {
+    font-weight: 600;
+    font-size: 16px;
+    color: #1f2937;
+  }
+  .nexify-loyalty__points {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .nexify-loyalty__points-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #7c3aed;
+  }
+  .nexify-loyalty__points-label {
+    font-size: 14px;
+    color: #6b7280;
+  }
+  .nexify-loyalty__reward {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: #374151;
+  }
+  .nexify-loyalty__reward-value {
+    font-weight: 600;
+    color: #059669;
+  }
+  .nexify-loyalty__tier {
+    margin-top: 10px;
+  }
+  .nexify-loyalty__tier-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    color: #ffffff;
+  }
+  .nexify-loyalty__referral-divider {
+    height: 1px;
+    background: #e5e7eb;
+    margin: 12px 0;
+  }
+  .nexify-loyalty__referral-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  .nexify-loyalty__referral-icon {
+    font-size: 16px;
+  }
+  .nexify-loyalty__referral-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: #1f2937;
+  }
+  .nexify-loyalty__referral-desc {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 8px;
+  }
+  .nexify-loyalty__referral-link-box {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  .nexify-loyalty__referral-input {
+    flex: 1;
+    padding: 6px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 11px;
+    color: #374151;
+    background: #f9fafb;
+    min-width: 0;
+  }
+  .nexify-loyalty__referral-btn {
+    padding: 6px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #ffffff;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .nexify-loyalty__referral-btn:hover {
+    background: #f3f4f6;
+  }
+  .nexify-loyalty__referral-share {
+    display: flex;
+    gap: 6px;
+  }
+  .nexify-loyalty__share-btn {
+    flex: 1;
+    padding: 6px 10px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: center;
+  }
+  .nexify-loyalty__share-btn--email {
+    background: #3b82f6;
+    color: #ffffff;
+  }
+  .nexify-loyalty__share-btn--email:hover {
+    background: #2563eb;
+  }
+  .nexify-loyalty__share-btn--whatsapp {
+    background: #25d366;
+    color: #ffffff;
+  }
+  .nexify-loyalty__share-btn--whatsapp:hover {
+    background: #1da851;
+  }
+</style>
+
+{{ 'loyalty-widget.js' | asset_url | script_tag }}
+
+{% schema %}
+{
+  "name": "Loyalty Points",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "app_url",
+      "label": "App URL",
+      "default": "https://app.example.com"
+    }
+  ]
+}
+{% endschema %}

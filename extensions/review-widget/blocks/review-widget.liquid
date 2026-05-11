@@ -1,0 +1,321 @@
+<div
+  id="nexify-reviews"
+  class="nexify-reviews"
+  data-app-url="{{ block.settings.app_url }}"
+  data-shop-id="{{ block.settings.shop_id }}"
+  data-product-id="{{ product.id }}"
+>
+  <div class="nexify-reviews__header">
+    <h2 class="nexify-reviews__title">Customer Reviews</h2>
+    <div class="nexify-reviews__summary" id="nexify-reviews-summary">
+      <div class="nexify-reviews__loading">Loading reviews...</div>
+    </div>
+  </div>
+
+  <div class="nexify-reviews__list" id="nexify-reviews-list"></div>
+
+  <div class="nexify-reviews__pagination" id="nexify-reviews-pagination"></div>
+</div>
+
+<style>
+  .nexify-reviews {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 1.5rem;
+    font-family: inherit;
+  }
+
+  .nexify-reviews__header {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .nexify-reviews__title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 0.75rem 0;
+    color: #111827;
+  }
+
+  .nexify-reviews__summary {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .nexify-reviews__aggregate-stars {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .nexify-reviews__aggregate-rating {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #111827;
+    margin-right: 0.25rem;
+  }
+
+  .nexify-reviews__total-count {
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
+
+  .nexify-reviews__loading {
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
+
+  .nexify-reviews__empty {
+    text-align: center;
+    padding: 2rem;
+    color: #6b7280;
+    font-size: 0.95rem;
+  }
+
+  /* Individual review card */
+  .nexify-review {
+    padding: 1.25rem 0;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  .nexify-review:last-child {
+    border-bottom: none;
+  }
+
+  .nexify-review__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .nexify-review__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .nexify-review__stars {
+    display: flex;
+    gap: 2px;
+  }
+
+  .nexify-review__star {
+    width: 16px;
+    height: 16px;
+  }
+
+  .nexify-review__star--filled {
+    color: #f59e0b;
+  }
+
+  .nexify-review__star--empty {
+    color: #d1d5db;
+  }
+
+  .nexify-review__reviewer {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #374151;
+  }
+
+  .nexify-review__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    color: #059669;
+    background: #ecfdf5;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-weight: 500;
+  }
+
+  .nexify-review__date {
+    font-size: 0.75rem;
+    color: #9ca3af;
+  }
+
+  .nexify-review__title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin: 0.5rem 0 0.25rem;
+    color: #111827;
+  }
+
+  .nexify-review__body {
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: #4b5563;
+    margin: 0.25rem 0 0.75rem;
+  }
+
+  /* Photo thumbnails */
+  .nexify-review__photos {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+  }
+
+  .nexify-review__photo {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 0.375rem;
+    border: 1px solid #e5e7eb;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+  }
+
+  .nexify-review__photo:hover {
+    transform: scale(1.05);
+  }
+
+  /* Helpful button */
+  .nexify-review__footer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .nexify-review__helpful-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    color: #6b7280;
+    background: none;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .nexify-review__helpful-btn:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+    color: #374151;
+  }
+
+  .nexify-review__helpful-btn--voted {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: #2563eb;
+    cursor: default;
+  }
+
+  .nexify-review__helpful-count {
+    font-size: 0.75rem;
+    color: #9ca3af;
+  }
+
+  /* Pagination */
+  .nexify-reviews__pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+  }
+
+  .nexify-reviews__page-btn {
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+    background: #fff;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .nexify-reviews__page-btn:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+  }
+
+  .nexify-reviews__page-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .nexify-reviews__page-info {
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
+
+  /* Lightbox for photo zoom */
+  .nexify-reviews__lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    cursor: pointer;
+  }
+
+  .nexify-reviews__lightbox img {
+    max-width: 90vw;
+    max-height: 90vh;
+    border-radius: 0.5rem;
+  }
+
+  /* Error state */
+  .nexify-reviews__error {
+    text-align: center;
+    padding: 2rem;
+    color: #dc2626;
+    font-size: 0.875rem;
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .nexify-reviews {
+      padding: 1rem;
+    }
+
+    .nexify-review__header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .nexify-review__photo {
+      width: 56px;
+      height: 56px;
+    }
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Product Reviews",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "app_url",
+      "label": "App URL",
+      "info": "The URL of your Nexify app (e.g., https://your-app.com)",
+      "default": ""
+    },
+    {
+      "type": "text",
+      "id": "shop_id",
+      "label": "Shop ID",
+      "info": "Your Nexify shop ID",
+      "default": ""
+    }
+  ]
+}
+{% endschema %}

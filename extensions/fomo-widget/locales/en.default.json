@@ -1,0 +1,12 @@
+{
+  "name": "Social Proof Popups",
+  "description": "Shows real-time purchase notifications to create urgency and increase conversions",
+  "settings": {
+    "app_url": {
+      "label": "App URL"
+    },
+    "shop_id": {
+      "label": "Shop ID"
+    }
+  }
+}

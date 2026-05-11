@@ -1,0 +1,18 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "0758e8683fee199d3d17d401740c331c"
+application_url = "https://localhost:3000"
+embedded = true
+name = "floxo"
+
+[webhooks]
+api_version = "2026-04"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_analytics,read_customers,write_customers,read_discounts,write_discounts,write_inventory,read_inventory,read_orders,write_orders,read_products,write_products,write_script_tags,read_themes"
+optional_scopes = [ ]
+use_legacy_install_flow = false
+
+[auth]
+redirect_urls = [ "https://localhost:3000/auth/callback" ]

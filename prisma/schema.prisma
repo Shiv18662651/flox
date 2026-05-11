@@ -1,0 +1,377 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Shop {
+  id              String   @id @default(cuid())
+  shopDomain      String   @unique
+  accessToken     String
+  plan            Plan     @default(STARTER)
+  isActive        Boolean  @default(true)
+  installedAt     DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  customers       Customer[]
+  reviews         Review[]
+  campaigns       Campaign[]
+  automations     Automation[]
+  loyaltyProgram  LoyaltyProgram?
+  referralProgram ReferralProgram?
+  seoSettings     SeoSettings?
+  webhookEvents   WebhookEvent[]
+  analyticsEvents AnalyticsEvent[]
+  upsells         Upsell[]
+
+  @@map("shops")
+}
+
+enum Plan {
+  STARTER
+  GROWTH
+  PRO
+}
+
+model Customer {
+  id              String   @id @default(cuid())
+  shopId          String
+  shopifyId       String
+  email           String
+  firstName       String?
+  lastName        String?
+  phone           String?
+  totalOrders     Int      @default(0)
+  totalSpent      Float    @default(0)
+  loyaltyPoints   Int      @default(0)
+  loyaltyTier     String?
+  isSubscribed    Boolean  @default(true)
+  referralCode    String?  @unique
+  referredBy      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  shop            Shop     @relation(fields: [shopId], references: [id])
+  reviews         Review[]
+  emailSends      EmailSend[]
+  loyaltyTransactions LoyaltyTransaction[]
+
+  @@unique([shopId, shopifyId])
+  @@index([shopId])
+  @@index([email])
+  @@map("customers")
+}
+
+model Review {
+  id              String   @id @default(cuid())
+  shopId          String
+  customerId      String?
+  shopifyProductId String
+  productTitle    String
+  rating          Int
+  title           String?
+  body            String?
+  photos          String[]
+  videos          String[]
+  verifiedPurchase Boolean @default(false)
+  isApproved      Boolean  @default(false)
+  isPublished     Boolean  @default(false)
+  sentiment       String?
+  helpfulCount    Int      @default(0)
+  orderId         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  shop            Shop     @relation(fields: [shopId], references: [id])
+  customer        Customer? @relation(fields: [customerId], references: [id])
+
+  @@index([shopId])
+  @@index([shopifyProductId])
+  @@map("reviews")
+}
+
+model ReviewRequest {
+  id              String   @id @default(cuid())
+  shopId          String
+  orderId         String
+  customerEmail   String
+  token           String   @unique @default(cuid())
+  scheduledAt     DateTime
+  sentAt          DateTime?
+  status          String   @default("pending")
+  createdAt       DateTime @default(now())
+
+  @@index([shopId])
+  @@index([scheduledAt])
+  @@index([token])
+  @@map("review_requests")
+}
+
+model Campaign {
+  id              String   @id @default(cuid())
+  shopId          String
+  name            String
+  subject         String
+  previewText     String?
+  templateJson    Json
+  templateHtml    String?
+  status          String   @default("draft")
+  scheduledAt     DateTime?
+  sentAt          DateTime?
+  recipientCount  Int      @default(0)
+  openCount       Int      @default(0)
+  clickCount      Int      @default(0)
+  revenue         Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  shop            Shop     @relation(fields: [shopId], references: [id])
+  emailSends      EmailSend[]
+
+  @@index([shopId])
+  @@map("campaigns")
+}
+
+model Automation {
+  id              String   @id @default(cuid())
+  shopId          String
+  name            String
+  trigger         String
+  isActive        Boolean  @default(false)
+  delayMinutes    Int      @default(60)
+  subject         String
+  templateJson    Json
+  templateHtml    String?
+  totalSent       Int      @default(0)
+  totalRevenue    Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  shop            Shop     @relation(fields: [shopId], references: [id])
+  emailSends      EmailSend[]
+
+  @@index([shopId])
+  @@map("automations")
+}
+
+model EmailSend {
+  id              String   @id @default(cuid())
+  shopId          String
+  customerId      String?
+  campaignId      String?
+  automationId    String?
+  toEmail         String
+  subject         String
+  status          String   @default("queued")
+  openedAt        DateTime?
+  clickedAt       DateTime?
+  brevoMessageId  String?
+  createdAt       DateTime @default(now())
+
+  customer        Customer? @relation(fields: [customerId], references: [id])
+  campaign        Campaign? @relation(fields: [campaignId], references: [id])
+  automation      Automation? @relation(fields: [automationId], references: [id])
+
+  @@index([shopId])
+  @@index([customerId])
+  @@map("email_sends")
+}
+
+model LoyaltyProgram {
+  id              String   @id @default(cuid())
+  shopId          String   @unique
+  isActive        Boolean  @default(false)
+  pointsPerDollar Int      @default(1)
+  pointsForSignup Int      @default(100)
+  pointsForReview Int      @default(50)
+  pointsForReferral Int    @default(200)
+  rewardValue     Float    @default(0.01)
+  tiers           Json?
+
+  shop            Shop     @relation(fields: [shopId], references: [id])
+  transactions    LoyaltyTransaction[]
+
+  @@map("loyalty_programs")
+}
+
+model LoyaltyTransaction {
+  id              String   @id @default(cuid())
+  shopId          String
+  customerId      String
+  programId       String?
+  type            String
+  points          Int
+  reason          String
+  orderId         String?
+  createdAt       DateTime @default(now())
+
+  customer        Customer @relation(fields: [customerId], references: [id])
+  program         LoyaltyProgram? @relation(fields: [programId], references: [id])
+
+  @@index([shopId])
+  @@index([customerId])
+  @@map("loyalty_transactions")
+}
+
+model ReferralProgram {
+  id              String   @id @default(cuid())
+  shopId          String   @unique
+  isActive        Boolean  @default(false)
+  advocateReward  Float    @default(10)
+  friendDiscount  Float    @default(15)
+  rewardType      String   @default("discount")
+
+  shop            Shop     @relation(fields: [shopId], references: [id])
+  referrals       Referral[]
+
+  @@map("referral_programs")
+}
+
+model Referral {
+  id              String   @id @default(cuid())
+  shopId          String
+  programId       String
+  referrerCustomerId String
+  referredEmail   String
+  referredCustomerId String?
+  status          String   @default("pending")
+  discountCode    String?
+  orderId         String?
+  rewardPaid      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  program         ReferralProgram @relation(fields: [programId], references: [id])
+
+  @@index([shopId])
+  @@map("referrals")
+}
+
+model Upsell {
+  id              String   @id @default(cuid())
+  shopId          String
+  type            String
+  productId       String?
+  title           String
+  discountPercent Int      @default(0)
+  isActive        Boolean  @default(true)
+  impressions     Int      @default(0)
+  conversions     Int      @default(0)
+  revenue         Float    @default(0)
+  createdAt       DateTime @default(now())
+
+  shop            Shop     @relation(fields: [shopId], references: [id])
+
+  @@index([shopId])
+  @@map("upsells")
+}
+
+model AnalyticsEvent {
+  id              String   @id @default(cuid())
+  shopId          String
+  sessionId       String
+  visitorId       String
+  eventType       String
+  productId       String?
+  orderId         String?
+  revenue         Float?
+  source          String?
+  medium          String?
+  campaign        String?
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime @default(now())
+
+  shop            Shop     @relation(fields: [shopId], references: [id])
+
+  @@index([shopId])
+  @@index([createdAt])
+  @@index([sessionId])
+  @@map("analytics_events")
+}
+
+model AnalyticsDailySummary {
+  id              String   @id @default(cuid())
+  shopId          String
+  date            DateTime @db.Date
+  totalRevenue    Float    @default(0)
+  totalOrders     Int      @default(0)
+  uniqueVisitors  Int      @default(0)
+  pageViews       Int      @default(0)
+  addToCarts      Int      @default(0)
+  source          String   @default("")
+  medium          String   @default("")
+  createdAt       DateTime @default(now())
+
+  @@unique([shopId, date, source, medium])
+  @@index([shopId])
+  @@index([date])
+  @@map("analytics_daily_summaries")
+}
+
+model SeoSettings {
+  id              String   @id @default(cuid())
+  shopId          String   @unique
+  autoMetaTags    Boolean  @default(true)
+  autoAltText     Boolean  @default(true)
+  autoSchema      Boolean  @default(true)
+  lastAuditAt     DateTime?
+  auditScore      Int?
+
+  shop            Shop     @relation(fields: [shopId], references: [id])
+  issues          SeoIssue[]
+
+  @@map("seo_settings")
+}
+
+model SeoIssue {
+  id              String   @id @default(cuid())
+  shopId          String
+  settingsId      String
+  type            String
+  severity        String
+  resourceUrl     String
+  description     String
+  isFixed         Boolean  @default(false)
+  detectedAt      DateTime @default(now())
+
+  settings        SeoSettings @relation(fields: [settingsId], references: [id])
+
+  @@index([shopId])
+  @@map("seo_issues")
+}
+
+model WebhookEvent {
+  id              String   @id @default(cuid())
+  shopId          String
+  topic           String
+  shopifyId       String
+  payload         Json
+  status          String   @default("pending")
+  processedAt     DateTime?
+  error           String?
+  createdAt       DateTime @default(now())
+
+  shop            Shop     @relation(fields: [shopId], references: [id])
+
+  @@unique([shopId, topic, shopifyId])
+  @@index([shopId])
+  @@index([topic])
+  @@index([status])
+  @@map("webhook_events")
+}
+
+model Session {
+  id              String   @id
+  shop            String
+  state           String?
+  isOnline        Boolean  @default(false)
+  scope           String?
+  expires         DateTime?
+  accessToken     String
+  userId          BigInt?
+
+  @@index([shop])
+  @@map("sessions")
+}

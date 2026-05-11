@@ -1,0 +1,41 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "0281e6fd817ecae379ff471334d494e3"
+name = "Floxo"
+embedded = true
+application_url = "https://shopify.dev/apps/default-app-home"
+
+[build]
+include_config_on_deploy = true
+automatically_update_urls_on_dev = true
+
+[webhooks]
+api_version = "2026-07"
+
+  [[webhooks.subscriptions]]
+  uri = "/api/webhooks"
+  topics = [
+  "app/uninstalled",
+  "checkouts/create",
+  "checkouts/update",
+  "customers/create",
+  "customers/update",
+  "orders/create",
+  "orders/fulfilled",
+  "orders/paid",
+  "orders/updated",
+  "products/create",
+  "products/delete",
+  "products/update"
+]
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = ""
+use_legacy_install_flow = false
+
+[auth]
+redirect_urls = [ "https://shopify.dev/apps/default-app-home/api/auth" ]
+
+[pos]
+embedded = false
