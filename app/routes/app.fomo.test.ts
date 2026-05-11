@@ -31,7 +31,8 @@ vi.mock("~/redis.server", () => ({
   },
 }));
 
-import { loader, action, getFomoSettings, saveFomoSettings } from "./app.fomo._index";
+import { loader, action } from "./app.fomo._index";
+import { getFomoSettings, saveFomoSettings } from "../utils/fomo.server";
 
 function createRequest(
   method: string = "GET",
