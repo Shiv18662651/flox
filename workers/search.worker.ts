@@ -2,7 +2,7 @@
 // Requirements: 15.2, 15.3, 15.4
 
 import { Worker, Job } from 'bullmq'
-import { MeiliSearch } from 'meilisearch'
+import { Meilisearch } from 'meilisearch'
 import { connection, QUEUES, WORKER_CONFIG, type SearchIndexJob } from './index'
 
 const INDEXES = {
@@ -14,8 +14,8 @@ const INDEXES = {
  * Create a Meilisearch client for the worker process.
  * Workers run in a separate process from the Remix app, so they need their own client.
  */
-function createMeilisearchClient(): MeiliSearch {
-  return new MeiliSearch({
+function createMeilisearchClient(): Meilisearch {
+  return new Meilisearch({
     host: process.env.MEILISEARCH_URL || 'http://127.0.0.1:7700',
     apiKey: process.env.MEILISEARCH_MASTER_KEY,
   })
@@ -26,7 +26,7 @@ function createMeilisearchClient(): MeiliSearch {
  */
 export async function processSearchIndexJob(
   job: Job<SearchIndexJob>,
-  client?: MeiliSearch
+  client?: Meilisearch
 ): Promise<void> {
   const { action, index, documentId, document } = job.data
   const meili = client || createMeilisearchClient()
