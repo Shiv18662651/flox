@@ -36,7 +36,8 @@ module.exports = {
     },
     {
       name: 'bullmq-workers',
-      script: 'workers/dist/index.js',
+      script: 'workers/index.ts',
+      interpreter: 'node_modules/.bin/tsx',
       instances: 1,
       exp_backoff_restart_delay: 1000,
       max_restarts: 10,

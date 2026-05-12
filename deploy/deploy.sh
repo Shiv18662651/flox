@@ -34,7 +34,7 @@ fi
 
 # ── 2. Install dependencies ─────────────────────────────────────────────────
 echo "📦 Installing dependencies..."
-npm ci
+NODE_ENV=development npm ci
 echo "✅ Dependencies installed"
 echo ""
 
@@ -46,7 +46,16 @@ echo ""
 
 # ── 4. Run database migrations ──────────────────────────────────────────────
 echo "🗃️  Running database migrations..."
-npx prisma migrate deploy
+# Baseline the DB if no migrations exist yet but the schema is already applied
+if [ ! -d "prisma/migrations" ] || [ -z "$(ls -A prisma/migrations 2>/dev/null)" ]; then
+  echo "   → No migrations found, baselining existing database..."
+  mkdir -p prisma/migrations/0_init
+  npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script > prisma/migrations/0_init/migration.sql
+  npx prisma migrate resolve --applied 0_init
+  echo "   → Baseline complete"
+else
+  npx prisma migrate deploy
+fi
 echo "✅ Migrations applied"
 echo ""
 
@@ -56,13 +65,7 @@ npx remix vite:build
 echo "✅ Remix app built → build/server/index.js"
 echo ""
 
-# ── 6. Build BullMQ workers ──────────────────────────────────────────────────
-echo "🔨 Building BullMQ workers..."
-npx tsc -p tsconfig.workers.json
-echo "✅ Workers built → workers/dist/index.js"
-echo ""
-
-# ── 7. Start / reload PM2 processes ─────────────────────────────────────────
+# ── 6. Start / reload PM2 processes ─────────────────────────────────────────
 echo "🚀 Starting PM2 processes..."
 
 if pm2 list | grep -q "shopify-app"; then
