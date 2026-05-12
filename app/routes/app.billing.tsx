@@ -5,6 +5,7 @@ import { useState } from "react";
 import { authenticate } from "~/shopify.server";
 import { db } from "~/db.server";
 import type { Plan } from "@prisma/client";
+import { Icon } from "~/components/Icon";
 import {
   PLAN_CONFIGS,
   createSubscription,
@@ -229,9 +230,7 @@ function UsageMeter({
     <div className="space-y-xs">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-xs text-on-surface-variant">
-          <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>
-            {icon}
-          </span>
+          <Icon name={icon} size={18} />
           <span className="text-body-md">{label}</span>
         </div>
         <span className={`text-label-md ${warning ? "text-error" : "text-on-surface"}`}>
@@ -262,10 +261,10 @@ function FaqItem({ q, a, defaultOpen }: { q: string; a: string; defaultOpen?: bo
       >
         <span className="text-label-md text-on-surface">{q}</span>
         <span
-          className="material-symbols-outlined text-on-surface-variant transition-transform duration-200"
+          className="text-on-surface-variant transition-transform duration-200 inline-block"
           style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
         >
-          expand_more
+          <Icon name="expand_more" size={24} />
         </span>
       </button>
       {open && (
@@ -302,12 +301,7 @@ export default function BillingPage() {
       {/* ── Trial Banner ─────────────────────────────────────────────────── */}
       <div className="bg-secondary-container text-on-secondary-container px-lg py-xs flex items-center justify-between gap-md flex-wrap">
         <div className="flex items-center gap-xs">
-          <span
-            className="material-symbols-outlined"
-            style={{ fontVariationSettings: "'FILL' 1", fontSize: "20px" }}
-          >
-            schedule
-          </span>
+          <Icon name="schedule" size={20} />
           <span className="text-label-md">
             <strong>Trial Period</strong> — {trialDaysRemaining} days remaining.
             Upgrade anytime to keep your data and features.
@@ -325,7 +319,7 @@ export default function BillingPage() {
       {/* ── Page Header ──────────────────────────────────────────────────── */}
       <header className="h-16 px-lg flex items-center bg-surface border-b border-outline-variant">
         <div className="flex items-center gap-xs">
-          <span className="material-symbols-outlined text-primary">credit_card</span>
+          <Icon name="credit_card" size={24} className="text-primary" />
           <h1 className="text-headline-md font-semibold text-on-surface">Billing &amp; Plans</h1>
         </div>
       </header>
@@ -334,23 +328,13 @@ export default function BillingPage() {
         {/* ── Alerts ───────────────────────────────────────────────────────── */}
         {displayMessage && (
           <div className="bg-secondary-container text-on-secondary-container px-sm py-xs rounded-lg flex items-center gap-xs">
-            <span
-              className="material-symbols-outlined"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              check_circle
-            </span>
+            <Icon name="check_circle" size={20} />
             <span className="text-label-md">{displayMessage}</span>
           </div>
         )}
         {displayError && (
           <div className="bg-error-container text-on-error-container px-sm py-xs rounded-lg flex items-center gap-xs">
-            <span
-              className="material-symbols-outlined"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              error
-            </span>
+            <Icon name="error" size={20} />
             <span className="text-label-md">{displayError}</span>
           </div>
         )}
@@ -361,12 +345,7 @@ export default function BillingPage() {
           <div className="md:col-span-1 bg-primary text-on-primary p-md rounded-xl shadow-md flex flex-col justify-between">
             <div>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-on-primary-container text-primary text-label-sm rounded-full mb-sm font-semibold">
-                <span
-                  className="material-symbols-outlined"
-                  style={{ fontVariationSettings: "'FILL' 1", fontSize: "14px" }}
-                >
-                  verified
-                </span>
+                <Icon name="verified" size={14} />
                 Active Plan
               </span>
               <h2 className="text-headline-md font-bold mt-xs">
@@ -392,7 +371,7 @@ export default function BillingPage() {
           {/* Usage meters */}
           <div className="md:col-span-2 bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-sm">
             <div className="flex items-center gap-xs mb-md">
-              <span className="material-symbols-outlined text-primary">data_usage</span>
+              <Icon name="data_usage" size={24} className="text-primary" />
               <h3 className="text-label-md font-semibold text-on-surface">
                 Current Month Usage
               </h3>
@@ -473,16 +452,11 @@ export default function BillingPage() {
                     <ul className="space-y-xs mb-md">
                       {plan.features.map((f) => (
                         <li key={f} className="flex items-start gap-xs text-body-md text-on-surface">
-                          <span
-                            className="material-symbols-outlined text-primary shrink-0"
-                            style={{
-                              fontVariationSettings: "'FILL' 1",
-                              fontSize: "18px",
-                              marginTop: "2px",
-                            }}
-                          >
-                            check_circle
-                          </span>
+                          <Icon
+                            name="check_circle"
+                            size={18}
+                            className="text-primary shrink-0 mt-[2px]"
+                          />
                           <span>{f}</span>
                         </li>
                       ))}
@@ -533,12 +507,7 @@ export default function BillingPage() {
         <section className="bg-primary rounded-xl p-lg flex flex-col md:flex-row items-center justify-between gap-md shadow-md">
           <div className="flex items-start gap-md">
             <div className="w-12 h-12 rounded-full bg-on-primary-container/20 flex items-center justify-center shrink-0">
-              <span
-                className="material-symbols-outlined text-on-primary"
-                style={{ fontVariationSettings: "'FILL' 1", fontSize: "28px" }}
-              >
-                business
-              </span>
+              <Icon name="business" size={28} className="text-on-primary" />
             </div>
             <div>
               <h3 className="text-headline-sm font-bold text-on-primary">

@@ -3,6 +3,7 @@ import { json } from "@remix-run/node";
 import { useActionData, useLoaderData, useSubmit, useNavigation } from "@remix-run/react";
 import { useState } from "react";
 import { authenticate } from "~/shopify.server";
+import { Icon } from "~/components/Icon";
 
 // Requirements: 12.4, 12.5, 12.6, 12.7, 12.9
 
@@ -363,9 +364,7 @@ export default function SeoPage() {
         <div>
           <h1 className="text-display-lg font-bold text-on-surface">SEO Automation</h1>
           <p className="text-body-lg text-on-surface-variant mt-xs">
-            <span className="material-symbols-outlined text-[16px] align-middle mr-1 text-outline">
-              schedule
-            </span>
+            <Icon name="schedule" size={16} className="inline align-middle mr-1 text-outline" />
             Last audit:{" "}
             <span className="font-semibold text-on-surface">{lastAudit}</span>
           </p>
@@ -376,9 +375,7 @@ export default function SeoPage() {
           disabled={isRunningAudit}
           className="inline-flex items-center gap-xs bg-primary text-on-primary text-label-md font-semibold px-md py-xs rounded-lg hover:opacity-90 transition-opacity shadow-sm disabled:opacity-60 self-start sm:self-auto"
         >
-          <span className="material-symbols-outlined text-[18px]">
-            {isRunningAudit ? "hourglass_top" : "manage_search"}
-          </span>
+          <Icon name={isRunningAudit ? "hourglass_top" : "manage_search"} size={18} />
           {isRunningAudit ? "Running Audit…" : "Run Audit Now"}
         </button>
       </div>
@@ -389,7 +386,7 @@ export default function SeoPage() {
           role="status"
           className="flex items-center gap-xs bg-secondary-container text-on-secondary-container px-sm py-xs rounded-lg text-label-md"
         >
-          <span className="material-symbols-outlined text-[18px]">check_circle</span>
+          <Icon name="check_circle" size={18} />
           {(actionData as { message: string }).message}
         </div>
       )}
@@ -398,7 +395,7 @@ export default function SeoPage() {
           role="alert"
           className="flex items-center gap-xs bg-error-container text-on-error-container px-sm py-xs rounded-lg text-label-md"
         >
-          <span className="material-symbols-outlined text-[18px]">error</span>
+          <Icon name="error" size={18} />
           {actionData.error}
         </div>
       )}
@@ -464,21 +461,15 @@ export default function SeoPage() {
               >
                 <div className="flex items-center gap-sm">
                   <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center shrink-0">
-                    <span className="material-symbols-outlined text-primary text-[22px]">
-                      {item.icon}
-                    </span>
+                    <Icon name={item.icon} size={22} className="text-primary" />
                   </div>
                   <div>
                     <div className="flex items-center gap-xs">
                       <p className="text-label-md font-semibold text-on-surface">{item.title}</p>
                       {toggles[item.key] ? (
-                        <span className="material-symbols-outlined text-secondary text-[16px]">
-                          check_circle
-                        </span>
+                        <Icon name="check_circle" size={16} className="text-secondary" />
                       ) : (
-                        <span className="material-symbols-outlined text-outline text-[16px]">
-                          cancel
-                        </span>
+                        <Icon name="cancel" size={16} className="text-outline" />
                       )}
                     </div>
                     <p className="text-label-sm text-on-surface-variant">{item.description}</p>
@@ -554,9 +545,7 @@ export default function SeoPage() {
                       <span
                         className={`inline-flex items-center gap-xs px-xs py-0.5 rounded text-label-sm font-bold ${cfg.badge}`}
                       >
-                        <span className="material-symbols-outlined text-[14px]">
-                          {cfg.icon}
-                        </span>
+                        <Icon name={cfg.icon} size={14} />
                         {finding.severity}
                       </span>
                     </td>
@@ -585,9 +574,7 @@ export default function SeoPage() {
                         onClick={() => handleFixIssue(finding.id)}
                         className="inline-flex items-center gap-xs text-label-sm font-semibold text-primary border border-primary px-sm py-0.5 rounded-lg hover:bg-primary hover:text-on-primary transition-colors"
                       >
-                        <span className="material-symbols-outlined text-[14px]">
-                          auto_fix_high
-                        </span>
+                        <Icon name="auto_fix_high" size={14} />
                         Auto-Fix
                       </button>
                     </td>
@@ -608,9 +595,7 @@ export default function SeoPage() {
             <div className="p-lg flex flex-col gap-md">
               {/* Label */}
               <div className="flex items-center gap-xs">
-                <span className="material-symbols-outlined text-on-primary-container text-[20px]">
-                  auto_awesome
-                </span>
+                <Icon name="auto_awesome" size={20} className="text-on-primary-container" />
                 <span className="text-label-sm font-bold text-on-primary-container uppercase tracking-widest">
                   Nexify AI Engine
                 </span>
@@ -634,14 +619,14 @@ export default function SeoPage() {
                   onClick={handleGenerateMeta}
                   className="inline-flex items-center gap-xs bg-on-primary-container text-primary-container text-label-md font-semibold px-md py-xs rounded-lg hover:opacity-90 transition-opacity shadow-sm"
                 >
-                  <span className="material-symbols-outlined text-[18px]">bolt</span>
+                  <Icon name="bolt" size={18} />
                   Generate Now
                 </button>
                 <button
                   type="button"
                   className="inline-flex items-center gap-xs border border-on-primary-container text-on-primary-container text-label-md font-semibold px-md py-xs rounded-lg hover:bg-on-primary-container hover:text-primary-container transition-colors"
                 >
-                  <span className="material-symbols-outlined text-[18px]">tune</span>
+                  <Icon name="tune" size={18} />
                   Customize Prompt
                 </button>
               </div>
@@ -694,9 +679,7 @@ export default function SeoPage() {
                 >
                   <div className="flex items-center gap-sm">
                     <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center shrink-0">
-                      <span className="material-symbols-outlined text-primary text-[22px]">
-                        {ch.icon}
-                      </span>
+                      <Icon name={ch.icon} size={22} className="text-primary" />
                     </div>
                     <div>
                       <p className="text-label-md font-semibold text-on-surface">{ch.name}</p>
@@ -706,7 +689,7 @@ export default function SeoPage() {
                   <span
                     className={`inline-flex items-center gap-xs px-xs py-0.5 rounded-full text-label-sm font-semibold shrink-0 ${cfg.pill}`}
                   >
-                    <span className="material-symbols-outlined text-[14px]">{cfg.icon}</span>
+                    <Icon name={cfg.icon} size={14} />
                     {cfg.label}
                   </span>
                 </div>
@@ -718,7 +701,7 @@ export default function SeoPage() {
             type="button"
             className="w-full inline-flex items-center justify-center gap-xs border border-outline-variant text-on-surface text-label-md font-semibold px-md py-xs rounded-lg hover:bg-surface-container transition-colors mt-auto"
           >
-            <span className="material-symbols-outlined text-[18px]">cable</span>
+            <Icon name="cable" size={18} />
             Manage Connections
           </button>
         </div>

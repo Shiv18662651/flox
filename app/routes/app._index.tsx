@@ -1,5 +1,6 @@
 import { json } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
+import { Icon } from "~/components/Icon";
 
 export async function loader() {
   return json({
@@ -138,7 +139,7 @@ export default function AppDashboard() {
               to="/app/analytics"
               className="inline-flex items-center gap-xs bg-secondary-container text-on-secondary-container text-label-md font-semibold px-md py-2 rounded-lg hover:opacity-90 transition-opacity"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>bar_chart</span>
+              <Icon name="bar_chart" size={18} />
               View Analytics
             </Link>
           </div>
@@ -146,7 +147,7 @@ export default function AppDashboard() {
           {/* Right illustration */}
           <div className="hidden md:flex items-center justify-center shrink-0">
             <div className="w-36 h-36 rounded-full bg-primary-container flex items-center justify-center opacity-90">
-              <span className="material-symbols-outlined text-secondary-container" style={{ fontSize: "72px" }}>storefront</span>
+              <Icon name="storefront" size={72} className="text-secondary-container" />
             </div>
           </div>
 
@@ -164,9 +165,7 @@ export default function AppDashboard() {
             >
               <div className="flex items-center justify-between">
                 <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center">
-                  <span className="material-symbols-outlined text-primary" style={{ fontSize: "22px" }}>
-                    {card.icon}
-                  </span>
+                  <Icon name={card.icon} size={22} className="text-primary" />
                 </div>
                 <span className="text-label-sm font-semibold text-on-secondary-container bg-secondary-container px-2 py-0.5 rounded-full">
                   {card.badge}
@@ -197,9 +196,7 @@ export default function AppDashboard() {
                   >
                     <div>
                       <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center mb-sm">
-                        <span className="material-symbols-outlined text-primary" style={{ fontSize: "22px" }}>
-                          {action.icon}
-                        </span>
+                        <Icon name={action.icon} size={22} className="text-primary" />
                       </div>
                       <h3 className="text-label-md font-semibold text-on-surface mb-xs">{action.title}</h3>
                       <p className="text-label-sm text-on-surface-variant mb-md leading-relaxed">
@@ -241,12 +238,7 @@ export default function AppDashboard() {
                         }`}
                       >
                         {item.done && (
-                          <span
-                            className="material-symbols-outlined text-on-primary"
-                            style={{ fontSize: "14px", fontVariationSettings: "'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 20" }}
-                          >
-                            check
-                          </span>
+                          <Icon name="check" size={14} className="text-on-primary" />
                         )}
                       </div>
                       <div>
@@ -260,9 +252,7 @@ export default function AppDashboard() {
                         <p className="text-label-sm text-on-surface-variant mt-0.5">{item.description}</p>
                       </div>
                     </div>
-                    <span className="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors shrink-0">
-                      chevron_right
-                    </span>
+                    <Icon name="chevron_right" size={20} className="text-outline-variant group-hover:text-primary transition-colors shrink-0" />
                   </li>
                 ))}
               </ul>
@@ -282,12 +272,7 @@ export default function AppDashboard() {
                     <div
                       className={`w-9 h-9 rounded-full ${item.iconBg} flex items-center justify-center shrink-0 mt-0.5`}
                     >
-                      <span
-                        className="material-symbols-outlined text-primary"
-                        style={{ fontSize: "18px" }}
-                      >
-                        {item.icon}
-                      </span>
+                      <Icon name={item.icon} size={18} className="text-primary" />
                     </div>
                     <div className="min-w-0">
                       <p className="text-body-md text-on-surface leading-snug">
@@ -305,7 +290,7 @@ export default function AppDashboard() {
               <div className="px-md py-sm border-t border-outline-variant">
                 <button className="flex items-center gap-xs text-primary text-label-md font-semibold hover:underline transition-colors">
                   View Full History
-                  <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>arrow_forward</span>
+                  <Icon name="arrow_forward" size={16} />
                 </button>
               </div>
             </section>

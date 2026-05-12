@@ -6,6 +6,7 @@ import { json } from "@remix-run/node";
 import { useLoaderData, useSearchParams, useNavigate } from "@remix-run/react";
 import { useState } from "react";
 import { authenticate } from "~/shopify.server";
+import { Icon } from "~/components/Icon";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -151,9 +152,7 @@ function MetricCard({
   return (
     <div className="bg-surface-container-lowest rounded-xl p-md border border-outline-variant shadow-sm flex flex-col gap-xs">
       <div className="flex items-center justify-between">
-        <span className="material-symbols-outlined text-primary text-[22px]">
-          {icon}
-        </span>
+        <Icon name={icon} size={22} className="text-primary" />
         {trend && (
           <span className="text-label-sm text-on-secondary-container bg-secondary-container px-2 py-0.5 rounded-full">
             {trend}
@@ -467,9 +466,7 @@ function TopProducts({ products }: { products: TopProduct[] }) {
           <div
             className={`w-10 h-10 rounded-lg ${p.imageColor} flex items-center justify-center shrink-0`}
           >
-            <span className="material-symbols-outlined text-primary text-[20px]">
-              inventory_2
-            </span>
+            <Icon name="inventory_2" size={20} className="text-primary" />
           </div>
           {/* Info */}
           <div className="flex-1 min-w-0">
@@ -567,9 +564,7 @@ function UTMLinkBuilder() {
 
       {generatedLink && (
         <div className="mt-xs rounded-lg bg-surface-container-low border border-outline-variant p-sm flex items-start gap-sm">
-          <span className="material-symbols-outlined text-primary text-[20px] shrink-0 mt-0.5">
-            link
-          </span>
+          <Icon name="link" size={20} className="text-primary shrink-0 mt-0.5" />
           <p className="text-body-md text-on-surface break-all flex-1 font-mono text-[13px]">
             {generatedLink}
           </p>
@@ -578,9 +573,7 @@ function UTMLinkBuilder() {
             onClick={handleCopy}
             className="shrink-0 flex items-center gap-xs text-label-md font-semibold text-primary hover:text-on-primary hover:bg-primary px-sm py-xs rounded-lg transition-colors"
           >
-            <span className="material-symbols-outlined text-[18px]">
-              {copied ? "check_circle" : "content_copy"}
-            </span>
+            <Icon name={copied ? "check_circle" : "content_copy"} size={18} />
             {copied ? "Copied!" : "Copy"}
           </button>
         </div>
@@ -624,9 +617,7 @@ export default function AnalyticsDashboard() {
         <div className="flex flex-wrap items-center gap-sm">
           {/* Date range */}
           <div className="flex items-center gap-xs bg-surface-container-lowest border border-outline-variant rounded-lg px-sm py-xs shadow-sm">
-            <span className="material-symbols-outlined text-on-surface-variant text-[18px]">
-              calendar_today
-            </span>
+            <Icon name="calendar_today" size={18} className="text-on-surface-variant" />
             <input
               type="date"
               defaultValue={dateRange.start}
@@ -648,7 +639,7 @@ export default function AnalyticsDashboard() {
             type="button"
             className="flex items-center gap-xs bg-primary text-on-primary text-label-md font-semibold px-md py-xs rounded-lg hover:opacity-90 transition-opacity shadow-sm"
           >
-            <span className="material-symbols-outlined text-[18px]">download</span>
+            <Icon name="download" size={18} />
             Export Data
           </button>
         </div>

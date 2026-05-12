@@ -5,6 +5,7 @@ import { useState } from "react";
 import { authenticate } from "~/shopify.server";
 import { db } from "~/db.server";
 import { isFeatureAvailable } from "~/utils/plan-limits.server";
+import { Icon } from "~/components/Icon";
 
 // Requirements: 8.1, 8.7, 8.8, 8.9
 
@@ -224,7 +225,7 @@ export default function LoyaltyDashboard() {
             type="submit"
             className="flex items-center gap-xs bg-primary text-on-primary px-5 py-2 rounded-xl text-label-md font-semibold shadow-sm hover:opacity-90 transition-opacity"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>save</span>
+            <Icon name="save" size={18} />
             Save Changes
           </button>
         </div>
@@ -234,7 +235,7 @@ export default function LoyaltyDashboard() {
       {actionData?.success && (
         <div role="alert" className="max-w-container-max mx-auto mt-sm px-lg">
           <div className="flex items-center gap-xs bg-secondary-container text-on-secondary-container px-md py-sm rounded-xl text-body-md">
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>check_circle</span>
+            <Icon name="check_circle" size={18} />
             Settings saved successfully.
           </div>
         </div>
@@ -242,7 +243,7 @@ export default function LoyaltyDashboard() {
       {actionData?.error && (
         <div role="alert" className="max-w-container-max mx-auto mt-sm px-lg">
           <div className="flex items-center gap-xs bg-error-container text-on-error-container px-md py-sm rounded-xl text-body-md">
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>error</span>
+            <Icon name="error" size={18} />
             {actionData.error}
           </div>
         </div>
@@ -264,7 +265,7 @@ export default function LoyaltyDashboard() {
             >
               <div className="flex items-center justify-between">
                 <p className="text-label-sm text-on-surface-variant uppercase tracking-wider">{card.label}</p>
-                <span className="material-symbols-outlined text-primary-container" style={{ fontSize: 20 }}>{card.icon}</span>
+                <Icon name={card.icon} size={20} className="text-primary-container" />
               </div>
               <p className="text-display-lg font-bold text-on-surface">{card.value}</p>
               <p className="text-label-sm text-on-surface-variant">{card.sub}</p>
@@ -281,7 +282,7 @@ export default function LoyaltyDashboard() {
             {/* Program Settings card */}
             <section className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm overflow-hidden">
               <div className="px-md py-sm border-b border-outline-variant bg-surface-container-low flex items-center gap-xs">
-                <span className="material-symbols-outlined text-primary" style={{ fontSize: 20 }}>settings</span>
+                <Icon name="settings" size={20} className="text-primary" />
                 <h2 className="text-headline-sm font-semibold text-on-surface">Program Settings</h2>
               </div>
 
@@ -316,7 +317,7 @@ export default function LoyaltyDashboard() {
                       Points per dollar
                     </label>
                     <div className="relative">
-                      <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" style={{ fontSize: 18 }}>toll</span>
+                      <Icon name="toll" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
                       <input
                         id="pointsPerDollar"
                         name="pointsPerDollar"
@@ -385,7 +386,7 @@ export default function LoyaltyDashboard() {
                       <ul className="space-y-xs">
                         {tier.perks.map((perk) => (
                           <li key={perk} className="flex items-start gap-xs text-body-md text-on-surface">
-                            <span className="material-symbols-outlined text-primary mt-0.5 flex-shrink-0" style={{ fontSize: 16 }}>check_circle</span>
+                            <Icon name="check_circle" size={16} className="text-primary mt-0.5 flex-shrink-0" />
                             {perk}
                           </li>
                         ))}
@@ -400,7 +401,7 @@ export default function LoyaltyDashboard() {
             <section className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm overflow-hidden">
               <div className="px-md py-sm border-b border-outline-variant bg-surface-container-low flex items-center justify-between">
                 <div className="flex items-center gap-xs">
-                  <span className="material-symbols-outlined text-primary" style={{ fontSize: 20 }}>receipt_long</span>
+                  <Icon name="receipt_long" size={20} className="text-primary" />
                   <h2 className="text-headline-sm font-semibold text-on-surface">Recent Transactions</h2>
                 </div>
                 <button className="text-label-md text-primary hover:underline">View all</button>
@@ -471,7 +472,7 @@ export default function LoyaltyDashboard() {
             {/* Top Members leaderboard */}
             <div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm overflow-hidden">
               <div className="px-md py-sm border-b border-outline-variant bg-surface-container-low flex items-center gap-xs">
-                <span className="material-symbols-outlined text-primary" style={{ fontSize: 20 }}>leaderboard</span>
+                <Icon name="leaderboard" size={20} className="text-primary" />
                 <h2 className="text-headline-sm font-semibold text-on-surface">Top Members</h2>
               </div>
 
@@ -503,7 +504,7 @@ export default function LoyaltyDashboard() {
             {/* Program Insights */}
             <div className="bg-primary-container rounded-xl shadow-sm overflow-hidden">
               <div className="px-md py-sm border-b border-on-primary-container/20 flex items-center gap-xs">
-                <span className="material-symbols-outlined text-on-primary-container" style={{ fontSize: 20 }}>insights</span>
+                <Icon name="insights" size={20} className="text-on-primary-container" />
                 <h2 className="text-headline-sm font-semibold text-on-primary-container">Program Insights</h2>
               </div>
 
@@ -517,7 +518,7 @@ export default function LoyaltyDashboard() {
 
                 <div className="pt-xs">
                   <button className="w-full flex items-center justify-center gap-xs bg-on-primary-container/20 hover:bg-on-primary-container/30 text-on-primary-container text-label-md font-semibold py-2 rounded-xl transition-colors">
-                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>open_in_new</span>
+                    <Icon name="open_in_new" size={18} />
                     View Full Report
                   </button>
                 </div>
@@ -532,7 +533,7 @@ export default function LoyaltyDashboard() {
         aria-label="Add new reward"
         className="fixed bottom-8 right-8 w-14 h-14 bg-primary text-on-primary rounded-full shadow-lg flex items-center justify-center hover:opacity-90 transition-opacity focus:outline-none focus:ring-4 focus:ring-primary/40 z-20"
       >
-        <span className="material-symbols-outlined" style={{ fontSize: 28 }}>add</span>
+        <Icon name="add" size={28} />
       </button>
     </main>
   );

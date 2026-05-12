@@ -5,6 +5,7 @@ import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData, useSearchParams, useSubmit, useNavigation } from "@remix-run/react";
 import { useState } from "react";
+import { Icon, StarRow } from "~/components/Icon";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -143,42 +144,18 @@ export async function action({ request }: ActionFunctionArgs) {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function StarRow({ rating, size = "sm" }: { rating: number; size?: "sm" | "md" }) {
-  const px = size === "md" ? "text-[18px]" : "text-[14px]";
-  return (
-    <span className={`inline-flex items-center gap-[1px] ${px}`} aria-label={`${rating} out of 5 stars`}>
-      {Array.from({ length: 5 }).map((_, i) => (
-        <span
-          key={i}
-          className="material-symbols-outlined"
-          style={{
-            fontSize: "inherit",
-            color: i < rating ? "#f59e0b" : "#d1d5db",
-            fontVariationSettings: "'FILL' 1",
-          }}
-        >
-          star
-        </span>
-      ))}
-    </span>
-  );
-}
+
 
 function SentimentBadge({ sentiment }: { sentiment: Sentiment }) {
-  const map: Record<Sentiment, { label: string; classes: string }> = {
-    positive: { label: "Positive", classes: "bg-secondary-container text-on-secondary-container" },
-    neutral: { label: "Neutral", classes: "bg-surface-container-high text-on-surface-variant" },
-    negative: { label: "Negative", classes: "bg-error-container text-on-error-container" },
+  const map: Record<Sentiment, { label: string; classes: string; icon: string }> = {
+    positive: { label: "Positive", classes: "bg-secondary-container text-on-secondary-container", icon: "sentiment_satisfied" },
+    neutral: { label: "Neutral", classes: "bg-surface-container-high text-on-surface-variant", icon: "sentiment_neutral" },
+    negative: { label: "Negative", classes: "bg-error-container text-on-error-container", icon: "sentiment_dissatisfied" },
   };
-  const { label, classes } = map[sentiment];
+  const { label, classes, icon } = map[sentiment];
   return (
     <span className={`inline-flex items-center gap-[4px] px-2 py-0.5 rounded-full text-label-sm font-semibold ${classes}`}>
-      <span
-        className="material-symbols-outlined"
-        style={{ fontSize: "12px", fontVariationSettings: "'FILL' 1" }}
-      >
-        {sentiment === "positive" ? "sentiment_satisfied" : sentiment === "negative" ? "sentiment_dissatisfied" : "sentiment_neutral"}
-      </span>
+      <Icon name={icon} size={12} />
       {label}
     </span>
   );
@@ -220,12 +197,7 @@ function StatCard({
       }`}
     >
       <div className="flex items-center justify-between">
-        <span
-          className={`material-symbols-outlined text-[22px] ${accent ? "text-on-tertiary-fixed-variant" : "text-primary"}`}
-          style={{ fontVariationSettings: "'FILL' 1" }}
-        >
-          {icon}
-        </span>
+        <Icon name={icon} size={22} className={accent ? "text-on-tertiary-fixed-variant" : "text-primary"} />
       </div>
       <p className={`text-label-md ${accent ? "text-on-tertiary-fixed-variant" : "text-on-surface-variant"}`}>
         {label}
@@ -292,7 +264,7 @@ export default function ReviewsDashboard() {
           type="button"
           className="inline-flex items-center gap-xs bg-primary text-on-primary text-label-md font-semibold px-md py-xs rounded-lg hover:opacity-90 transition-opacity shadow-sm self-start sm:self-auto"
         >
-          <span className="material-symbols-outlined text-[18px]">add</span>
+          <Icon name="add" size={18} />
           Primary Action
         </button>
       </div>
@@ -355,9 +327,7 @@ export default function ReviewsDashboard() {
           <div className="flex-1 flex flex-col sm:flex-row gap-sm">
             {/* Search */}
             <div className="relative flex-1">
-              <span className="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
-                search
-              </span>
+              <Icon name="search" size={18} className="absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant" />
               <input
                 type="search"
                 value={localSearch}
@@ -374,12 +344,7 @@ export default function ReviewsDashboard() {
 
             {/* Star rating select */}
             <div className="relative">
-              <span
-                className="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                star
-              </span>
+              <Icon name="star" size={18} className="absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant" />
               <select
                 value={starFilter}
                 onChange={(e) => updateParam("stars", e.target.value)}
@@ -415,7 +380,7 @@ export default function ReviewsDashboard() {
 
         {reviews.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-xl gap-sm text-on-surface-variant">
-            <span className="material-symbols-outlined text-[48px] opacity-40">rate_review</span>
+            <Icon name="rate_review" size={48} className="opacity-40" />
             <p className="text-body-lg font-medium">No reviews found</p>
             <p className="text-body-md">Try adjusting your filters.</p>
           </div>
@@ -443,7 +408,7 @@ export default function ReviewsDashboard() {
               onClick={() => updateParam("page", String(page - 1))}
               className="inline-flex items-center gap-[4px] px-sm py-xs rounded-lg border border-outline-variant text-label-md font-semibold text-on-surface hover:bg-surface-container-low disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+              <Icon name="chevron_left" size={18} />
               Previous
             </button>
             <button
@@ -453,7 +418,7 @@ export default function ReviewsDashboard() {
               className="inline-flex items-center gap-[4px] px-sm py-xs rounded-lg border border-outline-variant text-label-md font-semibold text-on-surface hover:bg-surface-container-low disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               Next
-              <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+              <Icon name="chevron_right" size={18} />
             </button>
           </div>
         </div>
@@ -465,7 +430,7 @@ export default function ReviewsDashboard() {
         className="fixed bottom-6 right-6 z-50 flex items-center gap-xs bg-primary text-on-primary px-md py-sm rounded-full shadow-lg hover:opacity-90 active:scale-95 transition-all text-label-md font-semibold"
         aria-label="Request reviews"
       >
-        <span className="material-symbols-outlined text-[20px]">add_comment</span>
+        <Icon name="add_comment" size={20} />
         Request Reviews
       </button>
     </main>
@@ -547,12 +512,7 @@ function ReviewRow({
             className="inline-flex items-center gap-[4px] px-sm py-[5px] rounded-lg bg-secondary-container text-on-secondary-container text-label-sm font-semibold hover:opacity-80 transition-opacity"
             aria-label={`Approve review by ${review.reviewer.name}`}
           >
-            <span
-              className="material-symbols-outlined text-[14px]"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              check_circle
-            </span>
+            <Icon name="check_circle" size={14} />
             Approve
           </button>
         )}
@@ -563,7 +523,7 @@ function ReviewRow({
             className="inline-flex items-center gap-[4px] px-sm py-[5px] rounded-lg border border-outline-variant text-on-surface-variant text-label-sm font-semibold hover:bg-surface-container transition-colors"
             aria-label={`Reject review by ${review.reviewer.name}`}
           >
-            <span className="material-symbols-outlined text-[14px]">block</span>
+            <Icon name="block" size={14} />
             Reject
           </button>
         )}
@@ -577,7 +537,7 @@ function ReviewRow({
           className="inline-flex items-center gap-[4px] px-sm py-[5px] rounded-lg border border-error-container text-error text-label-sm font-semibold hover:bg-error-container transition-colors"
           aria-label={`Delete review by ${review.reviewer.name}`}
         >
-          <span className="material-symbols-outlined text-[14px]">delete</span>
+          <Icon name="delete" size={14} />
           Delete
         </button>
       </div>

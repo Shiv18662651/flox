@@ -5,6 +5,7 @@ import { useState } from "react";
 import { authenticate } from "~/shopify.server";
 import { db } from "~/db.server";
 import { generateCodesForExistingCustomers } from "~/utils/referral.server";
+import { Icon } from "~/components/Icon";
 
 // Requirements: 11.1, 11.2, 11.7
 
@@ -218,9 +219,7 @@ function StatCard({
     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-sm flex flex-col gap-xs">
       <div className="flex items-center justify-between">
         <p className="text-label-sm text-on-surface-variant uppercase tracking-wider">{label}</p>
-        <span className="material-symbols-outlined text-primary" style={{ fontSize: "20px" }}>
-          {icon}
-        </span>
+        <Icon name={icon} size={20} className="text-primary" />
       </div>
       <h3 className="text-display-lg font-bold text-on-surface">{value}</h3>
       <p className="text-label-sm text-on-surface-variant">{sub}</p>
@@ -301,9 +300,7 @@ export default function ReferralsPage() {
           onClick={handleSave}
           className="inline-flex items-center gap-xs bg-primary text-on-primary px-5 py-2 rounded-lg text-label-md font-semibold shadow-sm hover:opacity-90 transition-opacity"
         >
-          <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>
-            save
-          </span>
+          <Icon name="save" size={18} />
           Save Changes
         </button>
       </div>
@@ -434,9 +431,7 @@ export default function ReferralsPage() {
               <div className="border border-outline-variant rounded-xl p-sm space-y-xs bg-surface-container-low">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-xs">
-                    <span className="material-symbols-outlined text-primary" style={{ fontSize: "20px" }}>
-                      mail
-                    </span>
+                    <Icon name="mail" size={20} className="text-primary" />
                     <span className="text-label-md text-on-surface font-semibold">
                       Email Notifications
                     </span>
@@ -467,9 +462,7 @@ export default function ReferralsPage() {
               <div className="border border-outline-variant rounded-xl p-sm space-y-xs bg-surface-container-low">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-xs">
-                    <span className="material-symbols-outlined text-primary" style={{ fontSize: "20px" }}>
-                      web
-                    </span>
+                    <Icon name="web" size={20} className="text-primary" />
                     <span className="text-label-md text-on-surface font-semibold">
                       Landing Page
                     </span>
@@ -596,9 +589,7 @@ export default function ReferralsPage() {
                       aria-label="More actions"
                       className="text-on-surface-variant hover:text-on-surface transition-colors rounded-full p-1 hover:bg-surface-container"
                     >
-                      <span className="material-symbols-outlined" style={{ fontSize: "20px" }}>
-                        more_horiz
-                      </span>
+                      <Icon name="more_horiz" size={20} />
                     </button>
                   </td>
                 </tr>
@@ -627,9 +618,7 @@ export default function ReferralsPage() {
               disabled={page === 1}
               className="inline-flex items-center gap-xs px-3 py-1.5 rounded-lg border border-outline-variant text-label-md text-on-surface hover:bg-surface-container disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>
-                chevron_left
-              </span>
+              <Icon name="chevron_left" size={16} />
               Previous
             </button>
 
@@ -656,9 +645,7 @@ export default function ReferralsPage() {
               className="inline-flex items-center gap-xs px-3 py-1.5 rounded-lg border border-outline-variant text-label-md text-on-surface hover:bg-surface-container disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               Next
-              <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>
-                chevron_right
-              </span>
+              <Icon name="chevron_right" size={16} />
             </button>
           </div>
         </div>
