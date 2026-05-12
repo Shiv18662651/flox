@@ -3,7 +3,7 @@
 
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useLoaderData, useSearchParams, useSubmit, useNavigation } from "@remix-run/react";
+import { useLoaderData, useSearchParams, useSubmit, useNavigation, useActionData } from "@remix-run/react";
 import { useState } from "react";
 import { Icon, StarRow } from "~/components/Icon";
 
@@ -221,11 +221,13 @@ function StatCard({
 export default function ReviewsDashboard() {
   const { reviews, totalCount, page, totalPages, tab, search, starFilter, stats } =
     useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
   const [, setSearchParams] = useSearchParams();
   const submit = useSubmit();
   const navigation = useNavigation();
   const isLoading = navigation.state === "loading";
   const [localSearch, setLocalSearch] = useState(search);
+  const [showRequestModal, setShowRequestModal] = useState(false);
 
   const updateParam = (key: string, value: string) => {
     setSearchParams((prev) => {
@@ -262,12 +264,27 @@ export default function ReviewsDashboard() {
         </div>
         <button
           type="button"
+          onClick={() => setShowRequestModal(true)}
           className="inline-flex items-center gap-xs bg-primary text-on-primary text-label-md font-semibold px-md py-xs rounded-lg hover:opacity-90 transition-opacity shadow-sm self-start sm:self-auto"
         >
           <Icon name="add" size={18} />
-          Primary Action
+          Request Reviews
         </button>
       </div>
+
+      {/* ── Action Feedback ── */}
+      {actionData && "success" in actionData && actionData.success && (
+        <div className="mb-md px-sm py-xs rounded-lg bg-secondary-container text-on-secondary-container flex items-center gap-xs text-label-md">
+          <Icon name="check_circle" size={16} />
+          {actionData.message}
+        </div>
+      )}
+      {actionData && "error" in actionData && actionData.error && (
+        <div className="mb-md px-sm py-xs rounded-lg bg-error-container text-on-error-container flex items-center gap-xs text-label-md">
+          <Icon name="error" size={16} />
+          {actionData.error}
+        </div>
+      )}
 
       {/* ── Stat Cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-md mb-lg">
@@ -427,12 +444,50 @@ export default function ReviewsDashboard() {
       {/* ── FAB ── */}
       <button
         type="button"
+        onClick={() => setShowRequestModal(true)}
         className="fixed bottom-6 right-6 z-50 flex items-center gap-xs bg-primary text-on-primary px-md py-sm rounded-full shadow-lg hover:opacity-90 active:scale-95 transition-all text-label-md font-semibold"
         aria-label="Request reviews"
       >
         <Icon name="add_comment" size={20} />
         Request Reviews
       </button>
+
+      {/* ── Request Reviews Modal ── */}
+      {showRequestModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-sm">
+          <div className="bg-surface-container-lowest rounded-xl shadow-xl max-w-md w-full p-md space-y-md">
+            <div className="flex items-center justify-between">
+              <h3 className="text-headline-sm font-semibold text-on-surface">Request Reviews</h3>
+              <button
+                type="button"
+                onClick={() => setShowRequestModal(false)}
+                className="text-on-surface-variant hover:text-on-surface transition-colors"
+              >
+                <Icon name="close" size={20} />
+              </button>
+            </div>
+            <p className="text-body-md text-on-surface-variant">
+              This will send review request emails to recent customers. Feature coming soon!
+            </p>
+            <div className="flex justify-end gap-xs">
+              <button
+                type="button"
+                onClick={() => setShowRequestModal(false)}
+                className="px-md py-xs rounded-lg border border-outline-variant text-label-md font-semibold text-on-surface hover:bg-surface-container transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowRequestModal(false)}
+                className="px-md py-xs rounded-lg bg-primary text-on-primary text-label-md font-semibold hover:opacity-90 transition-opacity"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
