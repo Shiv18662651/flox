@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "0758e8683fee199d3d17d401740c331c"
-application_url = "https://localhost:3000"
+application_url = "https://thenexify.app"
 embedded = true
 name = "floxo"
 
@@ -15,4 +15,4 @@ optional_scopes = [ ]
 use_legacy_install_flow = false
 
 [auth]
-redirect_urls = [ "https://localhost:3000/auth/callback" ]
+redirect_urls = [ "https://thenexify.app/auth/callback" ]
