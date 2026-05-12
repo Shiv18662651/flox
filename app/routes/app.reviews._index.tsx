@@ -28,7 +28,50 @@ interface MockReview {
 }
 
 // ---------------------------------------------------------------------------
-// Loader — mock data
+// Mutable mock data (persists in-memory until server restart)
+// ---------------------------------------------------------------------------
+
+let mockReviews: MockReview[] = [
+  {
+    id: "rev_001",
+    reviewer: { name: "Sarah Miller", initials: "SM", timeAgo: "2 hours ago" },
+    rating: 5,
+    productTitle: "Premium Wireless Headphones",
+    productUrl: "#",
+    sentiment: "positive",
+    title: "Absolutely love these headphones!",
+    body: "The sound quality is incredible and the noise cancellation works perfectly. I've been using them daily for the past month and they still feel brand new. Battery life is outstanding — easily 30+ hours on a single charge. Highly recommend to anyone looking for premium audio.",
+    photo: null,
+    status: "approved",
+  },
+  {
+    id: "rev_002",
+    reviewer: { name: "James Doe", initials: "JD", timeAgo: "1 day ago" },
+    rating: 3,
+    productTitle: "Ergonomic Office Chair",
+    productUrl: "#",
+    sentiment: "neutral",
+    title: "Decent chair, some assembly issues",
+    body: "The chair is comfortable enough for long work sessions. Assembly instructions were a bit confusing and one of the bolts was missing from the package. Customer support was helpful and sent a replacement quickly. Overall it does the job but the assembly experience could be better.",
+    photo: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=80&h=80&fit=crop",
+    status: "pending",
+  },
+  {
+    id: "rev_003",
+    reviewer: { name: "Anna Lee", initials: "AL", timeAgo: "3 days ago" },
+    rating: 1,
+    productTitle: "Organic Skincare Set",
+    productUrl: "#",
+    sentiment: "negative",
+    title: "Very disappointed with this product",
+    body: "The product arrived damaged and the packaging was completely crushed. The serum inside had leaked all over the box. I contacted support but haven't heard back in 5 days. This is not acceptable for a premium-priced skincare set. I would not recommend purchasing this.",
+    photo: null,
+    status: "rejected",
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Loader
 // ---------------------------------------------------------------------------
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -38,47 +81,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const search = url.searchParams.get("q") || "";
   const starFilter = url.searchParams.get("stars") || "";
 
-  const allReviews: MockReview[] = [
-    {
-      id: "rev_001",
-      reviewer: { name: "Sarah Miller", initials: "SM", timeAgo: "2 hours ago" },
-      rating: 5,
-      productTitle: "Premium Wireless Headphones",
-      productUrl: "#",
-      sentiment: "positive",
-      title: "Absolutely love these headphones!",
-      body: "The sound quality is incredible and the noise cancellation works perfectly. I've been using them daily for the past month and they still feel brand new. Battery life is outstanding — easily 30+ hours on a single charge. Highly recommend to anyone looking for premium audio.",
-      photo: null,
-      status: "approved",
-    },
-    {
-      id: "rev_002",
-      reviewer: { name: "James Doe", initials: "JD", timeAgo: "1 day ago" },
-      rating: 3,
-      productTitle: "Ergonomic Office Chair",
-      productUrl: "#",
-      sentiment: "neutral",
-      title: "Decent chair, some assembly issues",
-      body: "The chair is comfortable enough for long work sessions. Assembly instructions were a bit confusing and one of the bolts was missing from the package. Customer support was helpful and sent a replacement quickly. Overall it does the job but the assembly experience could be better.",
-      photo: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=80&h=80&fit=crop",
-      status: "pending",
-    },
-    {
-      id: "rev_003",
-      reviewer: { name: "Anna Lee", initials: "AL", timeAgo: "3 days ago" },
-      rating: 1,
-      productTitle: "Organic Skincare Set",
-      productUrl: "#",
-      sentiment: "negative",
-      title: "Very disappointed with this product",
-      body: "The product arrived damaged and the packaging was completely crushed. The serum inside had leaked all over the box. I contacted support but haven't heard back in 5 days. This is not acceptable for a premium-priced skincare set. I would not recommend purchasing this.",
-      photo: null,
-      status: "rejected",
-    },
-  ];
-
   // Filter
-  let filtered = allReviews;
+  let filtered = mockReviews;
   if (tab !== "all") filtered = filtered.filter((r) => r.status === tab);
   if (search) {
     const q = search.toLowerCase();
@@ -99,6 +103,14 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const reviews = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
+  // Dynamic stats from mock data
+  const total = mockReviews.length;
+  const avgRating = total > 0
+    ? parseFloat((mockReviews.reduce((s, r) => s + r.rating, 0) / total).toFixed(1))
+    : 0;
+  const pending = mockReviews.filter((r) => r.status === "pending").length;
+  const photoReviews = mockReviews.filter((r) => r.photo !== null).length;
+
   return json({
     reviews,
     totalCount,
@@ -107,12 +119,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     tab,
     search,
     starFilter,
-    stats: {
-      total: 1204,
-      avgRating: 4.8,
-      pending: 12,
-      photoReviews: 340,
-    },
+    stats: { total, avgRating, pending, photoReviews },
   });
 }
 
@@ -127,13 +134,18 @@ export async function action({ request }: ActionFunctionArgs) {
 
   if (!reviewId) return json({ error: "Review ID required" }, { status: 400 });
 
-  // In production this would hit the DB. With mock data we just echo success.
+  const review = mockReviews.find((r) => r.id === reviewId);
+  if (!review) return json({ error: "Review not found" }, { status: 404 });
+
   switch (intent) {
     case "approve":
+      review.status = "approved";
       return json({ success: true, message: "Review approved and published." });
     case "reject":
+      review.status = "rejected";
       return json({ success: true, message: "Review rejected." });
     case "delete":
+      mockReviews = mockReviews.filter((r) => r.id !== reviewId);
       return json({ success: true, message: "Review deleted." });
     default:
       return json({ error: "Invalid action" }, { status: 400 });

@@ -36,111 +36,115 @@ interface ConnectedChannel {
 }
 
 // ---------------------------------------------------------------------------
-// Loader — mock data
+// Mutable mock data
+// ---------------------------------------------------------------------------
+
+let mockAutomations: AutomationSetting[] = [
+  {
+    key: "autoMetaTags",
+    icon: "description",
+    title: "Dynamic Meta Tags",
+    description: "Auto-generate SEO titles & descriptions for new products using AI.",
+    enabled: true,
+  },
+  {
+    key: "autoAltText",
+    icon: "image_search",
+    title: "Alt Text Optimization",
+    description: "Fill missing image alt attributes via AI visual analysis.",
+    enabled: true,
+  },
+  {
+    key: "autoSchema",
+    icon: "data_object",
+    title: "JSON-LD Schema Markup",
+    description: "Inject structured data for rich results in Google Search.",
+    enabled: false,
+  },
+];
+
+let mockAuditFindings: AuditFinding[] = [
+  {
+    id: "1",
+    severity: "CRITICAL",
+    issue: "Missing Meta Title",
+    description: "14 products are missing SEO meta titles, reducing search visibility.",
+    page: "/products/*",
+  },
+  {
+    id: "2",
+    severity: "CRITICAL",
+    issue: "Duplicate Meta Descriptions",
+    description: "7 pages share identical meta descriptions, causing keyword cannibalization.",
+    page: "/collections/*",
+  },
+  {
+    id: "3",
+    severity: "WARNING",
+    issue: "Images Missing Alt Text",
+    description: "32 product images have no alt attribute, impacting accessibility and image SEO.",
+    page: "/products/*",
+  },
+  {
+    id: "4",
+    severity: "WARNING",
+    issue: "Slow Page Speed",
+    description: "Homepage LCP is 4.2s (target < 2.5s). Compress images and defer scripts.",
+    page: "/",
+  },
+  {
+    id: "5",
+    severity: "INFO",
+    issue: "Schema Markup Not Detected",
+    description: "No JSON-LD structured data found. Enable auto-schema to add rich results.",
+    page: "Sitewide",
+  },
+  {
+    id: "6",
+    severity: "INFO",
+    issue: "Sitemap Not Submitted",
+    description: "Your XML sitemap has not been submitted to Google Search Console.",
+    page: "/sitemap.xml",
+  },
+];
+
+const mockChannels: ConnectedChannel[] = [
+  {
+    id: "gsc",
+    name: "Google Search Console",
+    icon: "travel_explore",
+    status: "connected",
+    detail: "Synced 2 hours ago",
+  },
+  {
+    id: "bing",
+    name: "Bing Webmaster Tools",
+    icon: "public",
+    status: "action_required",
+    detail: "Verification token expired",
+  },
+];
+
+let mockHealthScore = 82;
+
+// ---------------------------------------------------------------------------
+// Loader
 // ---------------------------------------------------------------------------
 
 export async function loader({ request }: LoaderFunctionArgs) {
   await authenticate.admin(request);
 
-  const healthScore = 82;
-
-  const automations: AutomationSetting[] = [
-    {
-      key: "autoMetaTags",
-      icon: "description",
-      title: "Dynamic Meta Tags",
-      description: "Auto-generate SEO titles & descriptions for new products using AI.",
-      enabled: true,
-    },
-    {
-      key: "autoAltText",
-      icon: "image_search",
-      title: "Alt Text Optimization",
-      description: "Fill missing image alt attributes via AI visual analysis.",
-      enabled: true,
-    },
-    {
-      key: "autoSchema",
-      icon: "data_object",
-      title: "JSON-LD Schema Markup",
-      description: "Inject structured data for rich results in Google Search.",
-      enabled: false,
-    },
-  ];
-
-  const auditFindings: AuditFinding[] = [
-    {
-      id: "1",
-      severity: "CRITICAL",
-      issue: "Missing Meta Title",
-      description: "14 products are missing SEO meta titles, reducing search visibility.",
-      page: "/products/*",
-    },
-    {
-      id: "2",
-      severity: "CRITICAL",
-      issue: "Duplicate Meta Descriptions",
-      description: "7 pages share identical meta descriptions, causing keyword cannibalization.",
-      page: "/collections/*",
-    },
-    {
-      id: "3",
-      severity: "WARNING",
-      issue: "Images Missing Alt Text",
-      description: "32 product images have no alt attribute, impacting accessibility and image SEO.",
-      page: "/products/*",
-    },
-    {
-      id: "4",
-      severity: "WARNING",
-      issue: "Slow Page Speed",
-      description: "Homepage LCP is 4.2s (target < 2.5s). Compress images and defer scripts.",
-      page: "/",
-    },
-    {
-      id: "5",
-      severity: "INFO",
-      issue: "Schema Markup Not Detected",
-      description: "No JSON-LD structured data found. Enable auto-schema to add rich results.",
-      page: "Sitewide",
-    },
-    {
-      id: "6",
-      severity: "INFO",
-      issue: "Sitemap Not Submitted",
-      description: "Your XML sitemap has not been submitted to Google Search Console.",
-      page: "/sitemap.xml",
-    },
-  ];
-
-  const channels: ConnectedChannel[] = [
-    {
-      id: "gsc",
-      name: "Google Search Console",
-      icon: "travel_explore",
-      status: "connected",
-      detail: "Synced 2 hours ago",
-    },
-    {
-      id: "bing",
-      name: "Bing Webmaster Tools",
-      icon: "public",
-      status: "action_required",
-      detail: "Verification token expired",
-    },
-  ];
-
   const stats = {
-    criticalCount: auditFindings.filter((f) => f.severity === "CRITICAL").length,
-    warningCount: auditFindings.filter((f) => f.severity === "WARNING").length,
-    infoCount: auditFindings.filter((f) => f.severity === "INFO").length,
+    criticalCount: mockAuditFindings.filter((f) => f.severity === "CRITICAL").length,
+    warningCount: mockAuditFindings.filter((f) => f.severity === "WARNING").length,
+    infoCount: mockAuditFindings.filter((f) => f.severity === "INFO").length,
   };
 
   return json({
-    healthScore,
-    automations,
-    auditFindings,
-    channels,
+    healthScore: mockHealthScore,
+    automations: mockAutomations,
+    auditFindings: mockAuditFindings,
+    channels: mockChannels,
     stats,
     lastAudit: "Today, 08:45 AM",
   });
@@ -157,19 +161,35 @@ export async function action({ request }: ActionFunctionArgs) {
   const intent = formData.get("intent") as string;
 
   if (intent === "run-audit") {
-    return json({ success: true, message: "SEO audit started. Results will appear shortly.", error: null });
+    // Simulate audit improving the score slightly
+    mockHealthScore = Math.min(100, mockHealthScore + Math.floor(Math.random() * 5));
+    return json({ success: true, message: "SEO audit completed. Health score updated.", error: null });
   }
 
   if (intent === "fix-issue") {
     const issueId = formData.get("issueId") as string;
-    return json({ success: true, message: `Issue #${issueId} queued for auto-fix.`, error: null });
+    const idx = mockAuditFindings.findIndex((f) => f.id === issueId);
+    if (idx === -1) {
+      return json({ error: "Issue not found", success: false }, { status: 404 });
+    }
+    // Remove fixed issue and improve score
+    mockAuditFindings.splice(idx, 1);
+    mockHealthScore = Math.min(100, mockHealthScore + 3);
+    return json({ success: true, message: `Issue #${issueId} fixed successfully.`, error: null });
   }
 
   if (intent === "toggle-automation") {
-    return json({ success: true, message: "Automation setting updated.", error: null });
+    const key = formData.get("key") as AutomationSetting["key"];
+    const value = formData.get("value") === "true";
+    const automation = mockAutomations.find((a) => a.key === key);
+    if (automation) {
+      automation.enabled = value;
+    }
+    return json({ success: true, message: `${automation?.title ?? "Setting"} ${value ? "enabled" : "disabled"}.`, error: null });
   }
 
   if (intent === "generate-meta") {
+    mockHealthScore = Math.min(100, mockHealthScore + 2);
     return json({ success: true, message: "AI meta content generated successfully.", error: null });
   }
 
@@ -622,14 +642,7 @@ export default function SeoPage() {
                   <Icon name="bolt" size={18} />
                   Generate Now
                 </button>
-                <button
-                  type="button"
-                  onClick={() => alert("Customize prompt feature coming soon!")}
-                  className="inline-flex items-center gap-xs border border-on-primary-container text-on-primary-container text-label-md font-semibold px-md py-xs rounded-lg hover:bg-on-primary-container hover:text-primary-container transition-colors"
-                >
-                  <Icon name="tune" size={18} />
-                  Customize Prompt
-                </button>
+
               </div>
             </div>
 
@@ -698,14 +711,7 @@ export default function SeoPage() {
             })}
           </div>
 
-          <button
-            type="button"
-            onClick={() => alert("Manage connections feature coming soon!")}
-            className="w-full inline-flex items-center justify-center gap-xs border border-outline-variant text-on-surface text-label-md font-semibold px-md py-xs rounded-lg hover:bg-surface-container transition-colors mt-auto"
-          >
-            <Icon name="cable" size={18} />
-            Manage Connections
-          </button>
+
         </div>
       </div>
     </main>

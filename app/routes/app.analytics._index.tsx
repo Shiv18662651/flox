@@ -634,15 +634,7 @@ export default function AnalyticsDashboard() {
               aria-label="End date"
             />
           </div>
-          {/* Export */}
-          <button
-            type="button"
-            onClick={() => alert("Export feature coming soon!")}
-            className="flex items-center gap-xs bg-primary text-on-primary text-label-md font-semibold px-md py-xs rounded-lg hover:opacity-90 transition-opacity shadow-sm"
-          >
-            <Icon name="download" size={18} />
-            Export Data
-          </button>
+          {/* Export placeholder removed — not yet implemented */}
         </div>
       </div>
 
