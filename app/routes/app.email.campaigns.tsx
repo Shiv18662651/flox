@@ -12,6 +12,7 @@ import { db } from "~/db.server";
 import { isWithinEmailQuota } from "~/utils/plan-limits.server";
 import { emailQueue } from "../../workers/index";
 import { renderEmailHtml, injectTracking, injectUnsubscribeLink, type EmailBlock } from "~/utils/email-renderer.server";
+import { Icon } from "~/components/Icon";
 import { resolveRecipients, type RecipientMode, type SegmentFilters } from "~/utils/recipient-resolver.server";
 import { checkCampaignQuota } from "~/utils/campaign-quota.server";
 
@@ -534,22 +535,18 @@ const EMAIL_NAV = [
 function EmailNav() {
   const location = useLocation();
   return (
-    <div style={{ display: "flex", gap: "4px", marginBottom: "24px", borderBottom: "1px solid #e5e7eb", paddingBottom: "12px" }}>
+    <div className="flex gap-xs mb-lg border-b border-outline-variant pb-sm">
       {EMAIL_NAV.map((item) => {
         const isActive = location.pathname === item.path;
         return (
           <Link
             key={item.path}
             to={item.path}
-            style={{
-              padding: "8px 16px",
-              fontSize: "14px",
-              fontWeight: isActive ? "600" : "400",
-              color: isActive ? "#3b82f6" : "#6b7280",
-              borderBottom: isActive ? "2px solid #3b82f6" : "2px solid transparent",
-              textDecoration: "none",
-              marginBottom: "-14px",
-            }}
+            className={`px-md py-xs text-label-md font-medium border-b-2 -mb-[2px] transition-colors ${
+              isActive
+                ? "text-primary border-primary"
+                : "text-on-surface-variant border-transparent hover:text-on-surface"
+            }`}
           >
             {item.label}
           </Link>
@@ -749,120 +746,107 @@ export default function EmailCampaignsPage() {
 
   // --- Render ---
   return (
-    <div style={{ padding: "24px", maxWidth: "1200px", margin: "0 auto" }}>
+    <main className="p-lg max-w-container-max mx-auto font-sans pb-24">
       <EmailNav />
 
       {/* Page Header with New Campaign button */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-        <h1 style={{ fontSize: "24px", fontWeight: "bold", margin: 0 }}>Email Campaigns</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-md mb-lg">
+        <h1 className="text-display-lg font-bold text-on-surface">Email Campaigns</h1>
         <button
           type="button"
           onClick={() => setWizardOpen(true)}
-          style={{
-            padding: "10px 20px",
-            fontSize: "14px",
-            fontWeight: "600",
-            backgroundColor: "#3b82f6",
-            color: "#fff",
-            border: "none",
-            borderRadius: "6px",
-            cursor: "pointer",
-          }}
+          className="inline-flex items-center gap-xs bg-primary text-on-primary text-label-md font-semibold px-md py-xs rounded-lg hover:opacity-90 transition-opacity shadow-sm"
         >
+          <Icon name="add" size={18} />
           New Campaign
         </button>
       </div>
 
       {/* Success message */}
       {successMessage && (
-        <div role="status" style={{ padding: "12px", marginBottom: "16px", backgroundColor: "#d1fae5", borderRadius: "8px", color: "#065f46" }}>
+        <div role="status" className="mb-md px-sm py-xs rounded-lg bg-secondary-container text-on-secondary-container flex items-center gap-xs text-label-md">
+          <Icon name="check_circle" size={16} />
           {successMessage}
         </div>
       )}
 
       {(actionData as { error?: string })?.error && (
-        <div role="alert" style={{ padding: "12px", marginBottom: "16px", backgroundColor: "#fee2e2", borderRadius: "8px", color: "#991b1b" }}>
+        <div role="alert" className="mb-md px-sm py-xs rounded-lg bg-error-container text-on-error-container flex items-center gap-xs text-label-md">
+          <Icon name="error" size={16} />
           {(actionData as { error: string }).error}
         </div>
       )}
 
       {(actionData as { message?: string })?.message && !successMessage && (
-        <div role="status" style={{ padding: "12px", marginBottom: "16px", backgroundColor: "#d1fae5", borderRadius: "8px", color: "#065f46" }}>
+        <div role="status" className="mb-md px-sm py-xs rounded-lg bg-secondary-container text-on-secondary-container flex items-center gap-xs text-label-md">
+          <Icon name="check_circle" size={16} />
           {(actionData as { message: string }).message}
         </div>
       )}
 
       {/* Campaigns Table */}
-      <div style={{ border: "1px solid #e5e7eb", borderRadius: "8px", overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm overflow-hidden">
+        <table className="w-full border-collapse">
           <thead>
-            <tr style={{ backgroundColor: "#f9fafb" }}>
-              <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600" }}>Name</th>
-              <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600" }}>Subject</th>
-              <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600" }}>Status</th>
-              <th style={{ padding: "12px 16px", textAlign: "right", fontSize: "14px", fontWeight: "600" }}>Recipients</th>
-              <th style={{ padding: "12px 16px", textAlign: "right", fontSize: "14px", fontWeight: "600" }}>Opens</th>
-              <th style={{ padding: "12px 16px", textAlign: "right", fontSize: "14px", fontWeight: "600" }}>Clicks</th>
-              <th style={{ padding: "12px 16px", textAlign: "right", fontSize: "14px", fontWeight: "600" }}>Revenue</th>
-              <th style={{ padding: "12px 16px", textAlign: "center", fontSize: "14px", fontWeight: "600" }}>Actions</th>
+            <tr className="bg-surface-container-low border-b border-outline-variant">
+              <th className="px-md py-sm text-left text-label-md font-semibold text-on-surface">Name</th>
+              <th className="px-md py-sm text-left text-label-md font-semibold text-on-surface">Subject</th>
+              <th className="px-md py-sm text-left text-label-md font-semibold text-on-surface">Status</th>
+              <th className="px-md py-sm text-right text-label-md font-semibold text-on-surface">Recipients</th>
+              <th className="px-md py-sm text-right text-label-md font-semibold text-on-surface">Opens</th>
+              <th className="px-md py-sm text-right text-label-md font-semibold text-on-surface">Clicks</th>
+              <th className="px-md py-sm text-right text-label-md font-semibold text-on-surface">Revenue</th>
+              <th className="px-md py-sm text-center text-label-md font-semibold text-on-surface">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-outline-variant">
             {campaigns.length === 0 ? (
               <tr>
-                <td colSpan={8} style={{ padding: "48px 24px", textAlign: "center", color: "#6b7280" }}>
-                  <p style={{ fontSize: "16px", marginBottom: "8px" }}>No campaigns yet.</p>
-                  <p style={{ fontSize: "14px" }}>Click "New Campaign" above to create your first campaign.</p>
+                <td colSpan={8} className="py-xl px-md text-center text-on-surface-variant">
+                  <div className="flex flex-col items-center justify-center gap-sm">
+                    <Icon name="mail" size={48} className="opacity-40" />
+                    <p className="text-body-lg font-medium">No campaigns yet.</p>
+                    <p className="text-body-md">Click "New Campaign" above to create your first campaign.</p>
+                  </div>
                 </td>
               </tr>
             ) : (
               campaigns.map((c) => (
-                <tr key={c.id} style={{ borderTop: "1px solid #e5e7eb" }}>
-                  <td style={{ padding: "12px 16px", fontSize: "14px" }}>{c.name}</td>
-                  <td style={{ padding: "12px 16px", fontSize: "14px", color: "#6b7280" }}>{c.subject}</td>
-                  <td style={{ padding: "12px 16px" }}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-start" }}>
-                      <span style={{
-                        padding: "2px 8px",
-                        borderRadius: "12px",
-                        fontSize: "12px",
-                        fontWeight: "500",
-                        backgroundColor: c.status === "sent" ? "#d1fae5" : c.status === "draft" ? "#e5e7eb" : "#fef3c7",
-                        color: c.status === "sent" ? "#065f46" : c.status === "draft" ? "#374151" : "#92400e",
-                      }}>
+                <tr key={c.id} className="hover:bg-surface-container-low transition-colors">
+                  <td className="px-md py-sm text-body-md text-on-surface">{c.name}</td>
+                  <td className="px-md py-sm text-body-md text-on-surface-variant">{c.subject}</td>
+                  <td className="px-md py-sm">
+                    <div className="flex flex-col gap-xs items-start">
+                      <span className={`inline-block px-sm py-[2px] rounded-full text-label-sm font-semibold ${
+                        c.status === "sent" ? "bg-secondary-container text-on-secondary-container" :
+                        c.status === "draft" ? "bg-surface-container-high text-on-surface-variant" :
+                        "bg-tertiary-fixed text-on-tertiary-fixed-variant"
+                      }`}>
                         {c.status}
                       </span>
                       {c.isAbTest && (
-                        <span style={{
-                          padding: "2px 6px",
-                          borderRadius: "12px",
-                          fontSize: "10px",
-                          fontWeight: "600",
-                          backgroundColor: "#e0e7ff",
-                          color: "#3730a3",
-                          textTransform: "uppercase",
-                        }}>
+                        <span className="inline-block px-xs py-[2px] rounded-full text-label-sm font-semibold bg-primary-container text-on-primary-container uppercase">
                           A/B Test
                         </span>
                       )}
                     </div>
                   </td>
-                  <td style={{ padding: "12px 16px", textAlign: "right", fontSize: "14px" }}>{c.recipientCount}</td>
-                  <td style={{ padding: "12px 16px", textAlign: "right", fontSize: "14px" }}>
+                  <td className="px-md py-sm text-right text-body-md text-on-surface">{c.recipientCount}</td>
+                  <td className="px-md py-sm text-right text-body-md text-on-surface">
                     {c.recipientCount > 0 ? `${((c.openCount / c.recipientCount) * 100).toFixed(1)}%` : "\u2014"}
                   </td>
-                  <td style={{ padding: "12px 16px", textAlign: "right", fontSize: "14px" }}>
+                  <td className="px-md py-sm text-right text-body-md text-on-surface">
                     {c.recipientCount > 0 ? `${((c.clickCount / c.recipientCount) * 100).toFixed(1)}%` : "\u2014"}
                   </td>
-                  <td style={{ padding: "12px 16px", textAlign: "right", fontSize: "14px" }}>
+                  <td className="px-md py-sm text-right text-body-md text-on-surface">
                     ${c.revenue.toFixed(2)}
                   </td>
-                  <td style={{ padding: "12px 16px", textAlign: "center" }}>
+                  <td className="px-md py-sm text-center">
                     {c.status === "draft" && (
                       <button
                         type="button"
                         onClick={() => handleSchedule(c.id)}
-                        style={{ padding: "4px 12px", fontSize: "12px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" }}
+                        className="px-sm py-[4px] text-label-sm font-semibold bg-primary text-on-primary rounded-md hover:opacity-90 transition-opacity"
                       >
                         Send Now
                       </button>
@@ -877,55 +861,32 @@ export default function EmailCampaignsPage() {
 
       {/* Campaign Wizard Modal */}
       {wizardOpen && (
-        <div style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: "rgba(0, 0, 0, 0.5)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 1000,
-        }}>
-          <div style={{
-            backgroundColor: "#fff",
-            borderRadius: "12px",
-            width: "90%",
-            maxWidth: "680px",
-            maxHeight: "90vh",
-            overflow: "auto",
-            boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
-          }}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-sm">
+          <div className="bg-surface-container-lowest rounded-xl shadow-xl w-[90%] max-w-2xl max-h-[90vh] overflow-auto">
             {/* Modal Header */}
-            <div style={{ padding: "20px 24px", borderBottom: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h2 style={{ fontSize: "18px", fontWeight: "600", margin: 0 }}>New Campaign</h2>
+            <div className="px-md py-sm border-b border-outline-variant flex items-center justify-between">
+              <h2 className="text-headline-sm font-semibold text-on-surface">New Campaign</h2>
               <button
                 type="button"
                 onClick={handleWizardClose}
-                style={{ background: "none", border: "none", fontSize: "24px", cursor: "pointer", color: "#6b7280", lineHeight: 1 }}
+                className="text-on-surface-variant hover:text-on-surface transition-colors"
                 aria-label="Close wizard"
               >
-                &times;
+                <Icon name="close" size={24} />
               </button>
             </div>
 
             {/* Step Indicator */}
-            <div style={{ padding: "16px 24px", borderBottom: "1px solid #f3f4f6", display: "flex", gap: "4px" }}>
+            <div className="px-md py-sm border-b border-outline-variant flex gap-xs">
               {WIZARD_STEPS.map((step, idx) => (
-                <div key={step} style={{ flex: 1, textAlign: "center" }}>
-                  <div style={{
-                    height: "4px",
-                    borderRadius: "2px",
-                    backgroundColor: WIZARD_STEPS.indexOf(currentStep) >= idx ? "#3b82f6" : "#e5e7eb",
-                    marginBottom: "6px",
-                  }} />
-                  <span style={{
-                    fontSize: "12px",
-                    fontWeight: WIZARD_STEPS.indexOf(currentStep) === idx ? "600" : "400",
-                    color: WIZARD_STEPS.indexOf(currentStep) >= idx ? "#1f2937" : "#9ca3af",
-                  }}>
+                <div key={step} className="flex-1 text-center">
+                  <div className={`h-1 rounded-full mb-xs ${
+                    WIZARD_STEPS.indexOf(currentStep) >= idx ? "bg-primary" : "bg-surface-container-high"
+                  }`} />
+                  <span className={`text-label-sm ${
+                    WIZARD_STEPS.indexOf(currentStep) === idx ? "font-semibold text-on-surface" :
+                    WIZARD_STEPS.indexOf(currentStep) >= idx ? "text-on-surface-variant" : "text-on-surface-variant opacity-50"
+                  }`}>
                     {STEP_LABELS[step]}
                   </span>
                 </div>
@@ -933,7 +894,7 @@ export default function EmailCampaignsPage() {
             </div>
 
             {/* Step Content */}
-            <div style={{ padding: "24px" }}>
+            <div className="p-md">
               {/* --- Subject Step (Task 7.2) --- */}
               {currentStep === "subject" && (
                 <div>
@@ -1433,21 +1394,13 @@ export default function EmailCampaignsPage() {
             </div>
 
             {/* Modal Footer with navigation buttons */}
-            <div style={{ padding: "16px 24px", borderTop: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div className="px-md py-sm border-t border-outline-variant flex items-center justify-between">
               <div>
                 {currentStep !== "subject" && (
                   <button
                     type="button"
                     onClick={goBack}
-                    style={{
-                      padding: "8px 16px",
-                      fontSize: "14px",
-                      backgroundColor: "#fff",
-                      color: "#374151",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "6px",
-                      cursor: "pointer",
-                    }}
+                    className="px-sm py-xs rounded-lg border border-outline-variant text-label-md font-semibold text-on-surface hover:bg-surface-container-low transition-colors"
                   >
                     Back
                   </button>
@@ -1459,17 +1412,7 @@ export default function EmailCampaignsPage() {
                     type="button"
                     onClick={goNext}
                     disabled={!canGoNext()}
-                    style={{
-                      padding: "8px 20px",
-                      fontSize: "14px",
-                      fontWeight: "500",
-                      backgroundColor: canGoNext() ? "#3b82f6" : "#9ca3af",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: "6px",
-                      cursor: canGoNext() ? "pointer" : "not-allowed",
-                      opacity: canGoNext() ? 1 : 0.7,
-                    }}
+                    className="px-sm py-xs rounded-lg bg-primary text-on-primary text-label-md font-semibold hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Next
                   </button>
@@ -1478,16 +1421,7 @@ export default function EmailCampaignsPage() {
                     type="button"
                     onClick={handleSendCampaign}
                     disabled={sending}
-                    style={{
-                      padding: "8px 20px",
-                      fontSize: "14px",
-                      fontWeight: "600",
-                      backgroundColor: sending ? "#9ca3af" : "#059669",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: "6px",
-                      cursor: sending ? "not-allowed" : "pointer",
-                    }}
+                    className="px-sm py-xs rounded-lg bg-primary text-on-primary text-label-md font-semibold hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {sending ? "Sending..." : isAbTest ? "Send A/B Test" : "Send Campaign"}
                   </button>
@@ -1497,6 +1431,6 @@ export default function EmailCampaignsPage() {
           </div>
         </div>
       )}
-    </div>
+    </main>
   );
 }
