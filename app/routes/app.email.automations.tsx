@@ -3,11 +3,12 @@
 
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useActionData, useLoaderData, useSubmit } from "@remix-run/react";
-import { useState } from "react";
+import { useActionData, useLoaderData, useSubmit, useNavigation } from "@remix-run/react";
+import { useState, useEffect } from "react";
 import { authenticate } from "~/shopify.server";
 import { db } from "~/db.server";
 import { renderEmailHtml, type EmailBlock } from "~/utils/email-renderer.server";
+import { generateFlowFromDescription } from "~/ai.server";
 
 const TRIGGER_OPTIONS = [
   { value: "abandoned_cart", label: "Abandoned Cart" },
@@ -86,6 +87,20 @@ export async function action({ request }: ActionFunctionArgs) {
     return json({ success: true, message: "Automation created" });
   }
 
+  if (intent === "generate") {
+    const description = formData.get("description") as string;
+    if (!description || description.trim().length < 5) {
+      return json({ error: "Please describe your flow (at least 5 characters)" }, { status: 400 });
+    }
+
+    try {
+      const generated = await generateFlowFromDescription(description);
+      return json({ success: true, generated, error: null });
+    } catch {
+      return json({ error: "AI generation failed. Please try again." }, { status: 500 });
+    }
+  }
+
   if (intent === "toggle") {
     const automationId = formData.get("automationId") as string;
     if (!automationId) return json({ error: "Automation ID required" }, { status: 400 });
@@ -126,6 +141,7 @@ export default function EmailAutomationsPage() {
   const { automations } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const submit = useSubmit();
+  const navigation = useNavigation();
 
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
@@ -133,6 +149,34 @@ export default function EmailAutomationsPage() {
   const [subject, setSubject] = useState("");
   const [delayMinutes, setDelayMinutes] = useState("60");
   const [blocksText, setBlocksText] = useState(JSON.stringify(DEFAULT_BLOCKS, null, 2));
+
+  // AI Builder state
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiGenerated, setAiGenerated] = useState<{
+    name: string;
+    trigger: string;
+    delayMinutes: number;
+    subject: string;
+    blocks: unknown[];
+  } | null>(null);
+
+  const isGenerating = navigation.state === "submitting" && navigation.formData?.get("intent") === "generate";
+
+  // Apply AI-generated content when actionData returns it
+  useEffect(() => {
+    if (actionData && "generated" in actionData && actionData.generated) {
+      const g = actionData.generated as typeof aiGenerated;
+      setAiGenerated(g);
+      setName(g?.name || "");
+      setTrigger(g?.trigger || "welcome");
+      setSubject(g?.subject || "");
+      setDelayMinutes(String(g?.delayMinutes || 60));
+      setBlocksText(JSON.stringify(g?.blocks || DEFAULT_BLOCKS, null, 2));
+      setShowAiModal(false);
+      setShowForm(true);
+    }
+  }, [actionData]);
 
   const handleCreate = () => {
     const formData = new FormData();
@@ -165,13 +209,22 @@ export default function EmailAutomationsPage() {
     <div style={{ padding: "24px", maxWidth: "1200px", margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
         <h1 style={{ fontSize: "24px", fontWeight: "bold" }}>Email Automations</h1>
-        <button
-          type="button"
-          onClick={() => setShowForm(!showForm)}
-          style={{ padding: "8px 16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}
-        >
-          {showForm ? "Cancel" : "New Automation"}
-        </button>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button
+            type="button"
+            onClick={() => setShowAiModal(true)}
+            style={{ padding: "8px 16px", backgroundColor: "#7c3aed", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
+          >
+            <span>✨</span> AI Builder
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowForm(!showForm)}
+            style={{ padding: "8px 16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}
+          >
+            {showForm ? "Cancel" : "New Automation"}
+          </button>
+        </div>
       </div>
 
       {(actionData as { error?: string })?.error && (
@@ -186,9 +239,51 @@ export default function EmailAutomationsPage() {
         </div>
       )}
 
+      {showAiModal && (
+        <div style={{ border: "1px solid #e5e7eb", borderRadius: "8px", padding: "16px", marginBottom: "24px", backgroundColor: "#faf5ff" }}>
+          <h2 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
+            <span>✨</span> AI Flow Builder
+          </h2>
+          <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "12px" }}>
+            Describe the automation you want and let AI build it for you.
+          </p>
+          <textarea
+            value={aiPrompt}
+            onChange={(e) => setAiPrompt(e.target.value)}
+            rows={3}
+            placeholder="e.g. Send a welcome email to new customers with a 10% discount code, 1 hour after they sign up"
+            style={{ width: "100%", padding: "8px", border: "1px solid #d1d5db", borderRadius: "6px", marginBottom: "12px" }}
+          />
+          <div style={{ display: "flex", gap: "8px" }}>
+            <button
+              type="button"
+              disabled={isGenerating}
+              onClick={() => {
+                const fd = new FormData();
+                fd.set("intent", "generate");
+                fd.set("description", aiPrompt);
+                submit(fd, { method: "post" });
+              }}
+              style={{ padding: "8px 16px", backgroundColor: "#7c3aed", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", opacity: isGenerating ? 0.6 : 1 }}
+            >
+              {isGenerating ? "Generating..." : "Generate Flow"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowAiModal(false)}
+              style={{ padding: "8px 16px", backgroundColor: "#fff", color: "#374151", border: "1px solid #d1d5db", borderRadius: "6px", cursor: "pointer" }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {showForm && (
         <div style={{ border: "1px solid #e5e7eb", borderRadius: "8px", padding: "16px", marginBottom: "24px" }}>
-          <h2 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "16px" }}>Create Automation</h2>
+          <h2 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "16px" }}>
+            {aiGenerated ? "✨ AI-Generated Flow (Review & Save)" : "Create Automation"}
+          </h2>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
             <div>

@@ -99,3 +99,83 @@ export async function analyzeReviewSentiment(
   }
   return "neutral";
 }
+
+interface AIGeneratedFlow {
+  name: string;
+  trigger: string;
+  delayMinutes: number;
+  subject: string;
+  blocks: Array<{
+    type: string;
+    content?: string;
+    src?: string;
+    alt?: string;
+    url?: string;
+    text?: string;
+    align?: string;
+    products?: Array<{ id: string; title: string; image: string; price: string; url: string }>;
+  }>;
+}
+
+/**
+ * Generate an email automation flow from a natural language description.
+ */
+export async function generateFlowFromDescription(
+  description: string
+): Promise<AIGeneratedFlow> {
+  const response = await groq.chat.completions.create({
+    model: MODEL,
+    messages: [
+      {
+        role: "system",
+        content: `You are an email marketing automation expert. Given a user's description, generate a complete email automation flow. Return ONLY valid JSON with this exact structure:
+{
+  "name": "Flow name",
+  "trigger": "one of: abandoned_cart, welcome, post_purchase, win_back, birthday",
+  "delayMinutes": number (60 for 1 hour, 1440 for 1 day, 10080 for 1 week),
+  "subject": "Email subject line",
+  "blocks": [
+    { "type": "heading", "content": "Headline text" },
+    { "type": "text", "content": "Body paragraph text" },
+    { "type": "button", "text": "Button text", "url": "https://example.com" },
+    { "type": "divider" }
+  ]
+}
+Choose the most appropriate trigger based on the description. Keep content concise and conversion-focused.`,
+      },
+      { role: "user", content: description },
+    ],
+    max_tokens: 800,
+    temperature: 0.5,
+  });
+
+  const content = response.choices[0]?.message?.content || "{}";
+  try {
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : content);
+    return {
+      name: parsed.name || "Generated Flow",
+      trigger: ["abandoned_cart", "welcome", "post_purchase", "win_back", "birthday"].includes(parsed.trigger)
+        ? parsed.trigger
+        : "welcome",
+      delayMinutes: typeof parsed.delayMinutes === "number" ? parsed.delayMinutes : 60,
+      subject: parsed.subject || "Welcome!",
+      blocks: Array.isArray(parsed.blocks) ? parsed.blocks : [
+        { type: "heading", content: "Welcome!" },
+        { type: "text", content: "Thanks for joining us." },
+      ],
+    };
+  } catch {
+    return {
+      name: "Welcome Flow",
+      trigger: "welcome",
+      delayMinutes: 60,
+      subject: "Welcome to our store!",
+      blocks: [
+        { type: "heading", content: "Welcome!" },
+        { type: "text", content: "Thanks for joining us. We're excited to have you on board." },
+        { type: "button", text: "Shop Now", url: "https://example.com" },
+      ],
+    };
+  }
+}

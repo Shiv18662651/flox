@@ -25,8 +25,37 @@ model Shop {
   webhookEvents   WebhookEvent[]
   analyticsEvents AnalyticsEvent[]
   upsells         Upsell[]
+  signupForms     SignupForm[]
 
   @@map("shops")
+}
+
+model SignupForm {
+  id              String   @id @default(cuid())
+  shopId          String
+  name            String
+  formType        String   @default("popup") // popup, embedded, flyout, banner
+  trigger         String   @default("delay") // delay, exit_intent, scroll, manual
+  triggerValue    String?  // seconds for delay, percent for scroll
+  headline        String
+  subheadline     String?
+  ctaText         String   @default("Subscribe")
+  successMessage  String   @default("Thanks for subscribing!")
+  bgColor         String   @default("#005440")
+  textColor       String   @default("#ffffff")
+  buttonColor     String   @default("#006c4e")
+  imageUrl        String?
+  discountCode    String?  // optional incentive
+  isActive        Boolean  @default(false)
+  impressions     Int      @default(0)
+  conversions     Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  shop            Shop     @relation(fields: [shopId], references: [id])
+
+  @@index([shopId])
+  @@map("signup_forms")
 }
 
 enum Plan {
@@ -50,6 +79,10 @@ model Customer {
   isSubscribed    Boolean  @default(true)
   referralCode    String?  @unique
   referredBy      String?
+  lastOrderAt     DateTime?
+  avgOrderValue   Float    @default(0)
+  churnRisk       String?  @default("unknown") // low, medium, high
+  predictedNextOrderAt DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -124,14 +157,37 @@ model Campaign {
   openCount       Int      @default(0)
   clickCount      Int      @default(0)
   revenue         Float    @default(0)
+  isAbTest        Boolean  @default(false)
+  abTestWinner    String?  // variant name that won
+  abTestSentAt    DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   shop            Shop     @relation(fields: [shopId], references: [id])
   emailSends      EmailSend[]
+  abVariants      CampaignVariant[]
 
   @@index([shopId])
   @@map("campaigns")
+}
+
+model CampaignVariant {
+  id              String   @id @default(cuid())
+  campaignId      String
+  name            String   // "A" or "B"
+  subject         String
+  templateJson    Json
+  templateHtml    String?
+  splitPercent    Int      @default(50)
+  recipientCount  Int      @default(0)
+  openCount       Int      @default(0)
+  clickCount      Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  campaign        Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@map("campaign_variants")
 }
 
 model Automation {
