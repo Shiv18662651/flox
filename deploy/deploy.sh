@@ -34,7 +34,7 @@ fi
 
 # ── 2. Install dependencies ─────────────────────────────────────────────────
 echo "📦 Installing dependencies..."
-npm ci --omit=dev
+npm ci
 echo "✅ Dependencies installed"
 echo ""
 
