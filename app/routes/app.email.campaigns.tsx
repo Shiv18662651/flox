@@ -5,7 +5,7 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useActionData, useLoaderData, useSubmit, useFetcher } from "@remix-run/react";
 import { useState, useEffect, useCallback } from "react";
-import { parseAndValidateEmails } from "~/utils/email-parser.server";
+import { parseAndValidateEmails } from "~/utils/email-parser";
 import { authenticate } from "~/shopify.server";
 import { db } from "~/db.server";
 import { isWithinEmailQuota } from "~/utils/plan-limits.server";
