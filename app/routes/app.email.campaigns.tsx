@@ -5,6 +5,7 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useActionData, useLoaderData, useSubmit, useFetcher } from "@remix-run/react";
 import { useState, useEffect, useCallback } from "react";
+import { Link, useLocation } from "@remix-run/react";
 import { parseAndValidateEmails } from "~/utils/email-parser";
 import { authenticate } from "~/shopify.server";
 import { db } from "~/db.server";
@@ -31,7 +32,20 @@ export async function loader({ request }: LoaderFunctionArgs) {
     take: 50,
   });
 
-  return json({ campaigns, shopId: shop.id, plan: shop.plan });
+  // Fetch variants for campaigns that have A/B tests
+  const campaignIds = campaigns.filter((c: any) => c.isAbTest).map((c: any) => c.id);
+  const variants = campaignIds.length > 0
+    ? await (db as any).campaignVariant.findMany({
+        where: { campaignId: { in: campaignIds } },
+      })
+    : [];
+
+  const campaignsWithVariants = campaigns.map((c: any) => ({
+    ...c,
+    abVariants: c.isAbTest ? variants.filter((v: any) => v.campaignId === c.id) : [],
+  }));
+
+  return json({ campaigns: campaignsWithVariants as any, shopId: shop.id, plan: shop.plan });
 }
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -52,14 +66,34 @@ export async function action({ request }: ActionFunctionArgs) {
   // Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.9
   if (intent === "create_and_send") {
     const name = formData.get("name") as string;
-    const subject = formData.get("subject") as string;
-    const templateJson = formData.get("templateJson") as string;
     const recipientMode = formData.get("recipientMode") as RecipientMode;
     const segmentFiltersRaw = formData.get("segmentFilters") as string | null;
     const manualEmails = (formData.get("manualEmails") as string) || "";
+    const isAbTest = formData.get("isAbTest") === "true";
 
-    if (!name || !subject || !templateJson || !recipientMode) {
-      return json({ error: "Missing required fields: name, subject, templateJson, recipientMode" }, { status: 400 });
+    let subject: string;
+    let templateJson: string;
+    let variantASubject: string | undefined;
+    let variantBSubject: string | undefined;
+    let variantAContent: string | undefined;
+    let variantBContent: string | undefined;
+
+    if (isAbTest) {
+      variantASubject = formData.get("variantASubject") as string;
+      variantBSubject = formData.get("variantBSubject") as string;
+      variantAContent = formData.get("variantAContent") as string;
+      variantBContent = formData.get("variantBContent") as string;
+      if (!variantASubject || !variantBSubject || !variantAContent || !variantBContent) {
+        return json({ error: "Both A/B variants require subject and content" }, { status: 400 });
+      }
+      subject = variantASubject; // default subject for campaign record
+      templateJson = JSON.stringify([{ type: "html", content: variantAContent }]);
+    } else {
+      subject = formData.get("subject") as string;
+      templateJson = formData.get("templateJson") as string;
+      if (!name || !subject || !templateJson || !recipientMode) {
+        return json({ error: "Missing required fields: name, subject, templateJson, recipientMode" }, { status: 400 });
+      }
     }
 
     const segmentFilters: SegmentFilters = segmentFiltersRaw
@@ -76,7 +110,8 @@ export async function action({ request }: ActionFunctionArgs) {
         subject,
         templateJson: JSON.parse(JSON.stringify({ blocks, recipientConfig: { mode: recipientMode, segmentFilters, manualEmails } })),
         status: "draft",
-      },
+        isAbTest: isAbTest,
+      } as any,
     });
 
     // Resolve recipients based on mode
@@ -97,51 +132,153 @@ export async function action({ request }: ActionFunctionArgs) {
       }, { status: 400 });
     }
 
-    // Render HTML from template blocks
-    const htmlContent = renderEmailHtml(blocks);
-
-    // Update campaign status to "sending" (Requirement 7.3)
-    await db.campaign.update({
-      where: { id: campaign.id },
-      data: {
-        status: "sending",
-        recipientCount: resolved.count,
-        templateHtml: htmlContent,
-      },
-    });
-
     const baseUrl = process.env.SHOPIFY_APP_URL || "https://app.example.com";
 
-    // Create EmailSend records and enqueue jobs (Requirement 7.4, 7.5)
-    for (let i = 0; i < resolved.emails.length; i++) {
-      const toEmail = resolved.emails[i];
-      const customerId = resolved.customerIds[i] || undefined;
+    if (isAbTest && variantASubject && variantBSubject && variantAContent && variantBContent) {
+      // Create variants
+      const variantAHtml = renderEmailHtml([{ type: "html" as any, content: variantAContent }]);
+      const variantBHtml = renderEmailHtml([{ type: "html" as any, content: variantBContent }]);
 
-      const emailSend = await db.emailSend.create({
+      const variantA = await (db as any).campaignVariant.create({
         data: {
-          shopId: shop.id,
           campaignId: campaign.id,
-          toEmail,
-          subject,
-          status: "queued",
-          ...(customerId ? { customerId } : {}),
+          name: "A",
+          subject: variantASubject,
+          templateJson: [{ type: "html", content: variantAContent }],
+          templateHtml: variantAHtml,
+          splitPercent: 50,
         },
       });
 
-      // Inject tracking pixel, link wrapping, and unsubscribe link per recipient
-      let personalizedHtml = injectTracking(htmlContent, emailSend.id, baseUrl);
-      if (customerId) {
-        personalizedHtml = injectUnsubscribeLink(personalizedHtml, customerId, baseUrl);
+      const variantB = await (db as any).campaignVariant.create({
+        data: {
+          campaignId: campaign.id,
+          name: "B",
+          subject: variantBSubject,
+          templateJson: [{ type: "html", content: variantBContent }],
+          templateHtml: variantBHtml,
+          splitPercent: 50,
+        },
+      });
+
+      // Split recipients 50/50
+      const mid = Math.floor(resolved.emails.length / 2);
+      const aEmails = resolved.emails.slice(0, mid);
+      const aCustomerIds = resolved.customerIds.slice(0, mid);
+      const bEmails = resolved.emails.slice(mid);
+      const bCustomerIds = resolved.customerIds.slice(mid);
+
+      // Update campaign
+      await db.campaign.update({
+        where: { id: campaign.id },
+        data: {
+          status: "sending",
+          recipientCount: resolved.count,
+          templateHtml: variantAHtml,
+        },
+      });
+
+      // Send Variant A
+      for (let i = 0; i < aEmails.length; i++) {
+        const toEmail = aEmails[i];
+        const customerId = aCustomerIds[i] || undefined;
+        const emailSend = await db.emailSend.create({
+          data: {
+            shopId: shop.id,
+            campaignId: campaign.id,
+            toEmail,
+            subject: variantASubject,
+            status: "queued",
+            ...(customerId ? { customerId } : {}),
+          },
+        });
+        let personalizedHtml = injectTracking(variantAHtml, emailSend.id, baseUrl);
+        if (customerId) {
+          personalizedHtml = injectUnsubscribeLink(personalizedHtml, customerId, baseUrl);
+        }
+        await emailQueue.add("campaign-email", {
+          shopId: shop.id,
+          campaignId: campaign.id,
+          emailSendId: emailSend.id,
+          toEmail,
+          subject: variantASubject,
+          htmlContent: personalizedHtml,
+        });
       }
 
-      await emailQueue.add("campaign-email", {
-        shopId: shop.id,
-        campaignId: campaign.id,
-        emailSendId: emailSend.id,
-        toEmail,
-        subject,
-        htmlContent: personalizedHtml,
+      // Send Variant B
+      for (let i = 0; i < bEmails.length; i++) {
+        const toEmail = bEmails[i];
+        const customerId = bCustomerIds[i] || undefined;
+        const emailSend = await db.emailSend.create({
+          data: {
+            shopId: shop.id,
+            campaignId: campaign.id,
+            toEmail,
+            subject: variantBSubject,
+            status: "queued",
+            ...(customerId ? { customerId } : {}),
+          },
+        });
+        let personalizedHtml = injectTracking(variantBHtml, emailSend.id, baseUrl);
+        if (customerId) {
+          personalizedHtml = injectUnsubscribeLink(personalizedHtml, customerId, baseUrl);
+        }
+        await emailQueue.add("campaign-email", {
+          shopId: shop.id,
+          campaignId: campaign.id,
+          emailSendId: emailSend.id,
+          toEmail,
+          subject: variantBSubject,
+          htmlContent: personalizedHtml,
+        });
+      }
+
+      // Update variant counts
+      await (db as any).campaignVariant.update({ where: { id: variantA.id }, data: { recipientCount: aEmails.length } });
+      await (db as any).campaignVariant.update({ where: { id: variantB.id }, data: { recipientCount: bEmails.length } });
+    } else {
+      // Regular campaign send
+      const htmlContent = renderEmailHtml(blocks);
+
+      await db.campaign.update({
+        where: { id: campaign.id },
+        data: {
+          status: "sending",
+          recipientCount: resolved.count,
+          templateHtml: htmlContent,
+        },
       });
+
+      for (let i = 0; i < resolved.emails.length; i++) {
+        const toEmail = resolved.emails[i];
+        const customerId = resolved.customerIds[i] || undefined;
+
+        const emailSend = await db.emailSend.create({
+          data: {
+            shopId: shop.id,
+            campaignId: campaign.id,
+            toEmail,
+            subject,
+            status: "queued",
+            ...(customerId ? { customerId } : {}),
+          },
+        });
+
+        let personalizedHtml = injectTracking(htmlContent, emailSend.id, baseUrl);
+        if (customerId) {
+          personalizedHtml = injectUnsubscribeLink(personalizedHtml, customerId, baseUrl);
+        }
+
+        await emailQueue.add("campaign-email", {
+          shopId: shop.id,
+          campaignId: campaign.id,
+          emailSendId: emailSend.id,
+          toEmail,
+          subject,
+          htmlContent: personalizedHtml,
+        });
+      }
     }
 
     // Update campaign status to "sent" (Requirement 7.6)
@@ -153,7 +290,7 @@ export async function action({ request }: ActionFunctionArgs) {
       },
     });
 
-    return json({ success: true, message: `Campaign sent to ${resolved.count} recipients` });
+    return json({ success: true, message: `Campaign sent to ${resolved.count} recipients${isAbTest ? " (A/B test)" : ""}` });
   }
 
   // --- Intent: save_draft ---
@@ -386,8 +523,44 @@ const STEP_LABELS: Record<WizardStep, string> = {
   review: "Review",
 };
 
+const EMAIL_NAV = [
+  { label: "Campaigns", path: "/app/email/campaigns" },
+  { label: "Templates", path: "/app/email/templates" },
+  { label: "Automations", path: "/app/email/automations" },
+  { label: "Subscribers", path: "/app/email/subscribers" },
+  { label: "Signup Forms", path: "/app/email/signup-forms" },
+];
+
+function EmailNav() {
+  const location = useLocation();
+  return (
+    <div style={{ display: "flex", gap: "4px", marginBottom: "24px", borderBottom: "1px solid #e5e7eb", paddingBottom: "12px" }}>
+      {EMAIL_NAV.map((item) => {
+        const isActive = location.pathname === item.path;
+        return (
+          <Link
+            key={item.path}
+            to={item.path}
+            style={{
+              padding: "8px 16px",
+              fontSize: "14px",
+              fontWeight: isActive ? "600" : "400",
+              color: isActive ? "#3b82f6" : "#6b7280",
+              borderBottom: isActive ? "2px solid #3b82f6" : "2px solid transparent",
+              textDecoration: "none",
+              marginBottom: "-14px",
+            }}
+          >
+            {item.label}
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function EmailCampaignsPage() {
-  const { campaigns } = useLoaderData<typeof loader>();
+  const { campaigns } = useLoaderData<typeof loader>() as { campaigns: any[] };
   const actionData = useActionData<typeof action>();
   const submit = useSubmit();
   const countFetcher = useFetcher<{ count?: number; quotaRemaining?: number; quotaExceeded?: boolean }>();
@@ -406,6 +579,13 @@ export default function EmailCampaignsPage() {
   const [quotaExceeded, setQuotaExceeded] = useState(false);
   const [sending, setSending] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+
+  // A/B Testing state
+  const [isAbTest, setIsAbTest] = useState(false);
+  const [variantASubject, setVariantASubject] = useState("");
+  const [variantBSubject, setVariantBSubject] = useState("");
+  const [variantAContent, setVariantAContent] = useState("");
+  const [variantBContent, setVariantBContent] = useState("");
 
   // Manual email parsing state
   const [parsedEmails, setParsedEmails] = useState<{ valid: string[]; invalid: string[]; duplicatesRemoved: number }>({ valid: [], invalid: [], duplicatesRemoved: 0 });
@@ -475,6 +655,11 @@ export default function EmailCampaignsPage() {
     setQuotaExceeded(false);
     setSending(false);
     setParsedEmails({ valid: [], invalid: [], duplicatesRemoved: 0 });
+    setIsAbTest(false);
+    setVariantASubject("");
+    setVariantBSubject("");
+    setVariantAContent("");
+    setVariantBContent("");
   };
 
   const handleWizardClose = () => {
@@ -498,8 +683,16 @@ export default function EmailCampaignsPage() {
     const formData = new FormData();
     formData.set("intent", "create_and_send");
     formData.set("name", campaignName.trim());
-    formData.set("subject", subject.trim());
-    formData.set("templateJson", JSON.stringify([{ type: "html", content: htmlContent }]));
+    if (isAbTest) {
+      formData.set("isAbTest", "true");
+      formData.set("variantASubject", variantASubject.trim());
+      formData.set("variantBSubject", variantBSubject.trim());
+      formData.set("variantAContent", variantAContent.trim());
+      formData.set("variantBContent", variantBContent.trim());
+    } else {
+      formData.set("subject", subject.trim());
+      formData.set("templateJson", JSON.stringify([{ type: "html", content: htmlContent }]));
+    }
     formData.set("recipientMode", recipientMode);
     formData.set("segmentFilters", JSON.stringify(segmentFilters));
     formData.set("manualEmails", manualEmails);
@@ -515,8 +708,12 @@ export default function EmailCampaignsPage() {
   };
 
   // Validation helpers
-  const isSubjectStepValid = campaignName.trim().length > 0 && subject.trim().length > 0;
-  const isContentStepValid = htmlContent.trim().length > 0;
+  const isSubjectStepValid = isAbTest
+    ? campaignName.trim().length > 0 && variantASubject.trim().length > 0 && variantBSubject.trim().length > 0
+    : campaignName.trim().length > 0 && subject.trim().length > 0;
+  const isContentStepValid = isAbTest
+    ? variantAContent.trim().length > 0 && variantBContent.trim().length > 0
+    : htmlContent.trim().length > 0;
   const isRecipientsStepValid = recipientCount > 0;
 
   const canGoNext = (): boolean => {
@@ -553,6 +750,8 @@ export default function EmailCampaignsPage() {
   // --- Render ---
   return (
     <div style={{ padding: "24px", maxWidth: "1200px", margin: "0 auto" }}>
+      <EmailNav />
+
       {/* Page Header with New Campaign button */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
         <h1 style={{ fontSize: "24px", fontWeight: "bold", margin: 0 }}>Email Campaigns</h1>
@@ -622,16 +821,31 @@ export default function EmailCampaignsPage() {
                   <td style={{ padding: "12px 16px", fontSize: "14px" }}>{c.name}</td>
                   <td style={{ padding: "12px 16px", fontSize: "14px", color: "#6b7280" }}>{c.subject}</td>
                   <td style={{ padding: "12px 16px" }}>
-                    <span style={{
-                      padding: "2px 8px",
-                      borderRadius: "12px",
-                      fontSize: "12px",
-                      fontWeight: "500",
-                      backgroundColor: c.status === "sent" ? "#d1fae5" : c.status === "draft" ? "#e5e7eb" : "#fef3c7",
-                      color: c.status === "sent" ? "#065f46" : c.status === "draft" ? "#374151" : "#92400e",
-                    }}>
-                      {c.status}
-                    </span>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-start" }}>
+                      <span style={{
+                        padding: "2px 8px",
+                        borderRadius: "12px",
+                        fontSize: "12px",
+                        fontWeight: "500",
+                        backgroundColor: c.status === "sent" ? "#d1fae5" : c.status === "draft" ? "#e5e7eb" : "#fef3c7",
+                        color: c.status === "sent" ? "#065f46" : c.status === "draft" ? "#374151" : "#92400e",
+                      }}>
+                        {c.status}
+                      </span>
+                      {c.isAbTest && (
+                        <span style={{
+                          padding: "2px 6px",
+                          borderRadius: "12px",
+                          fontSize: "10px",
+                          fontWeight: "600",
+                          backgroundColor: "#e0e7ff",
+                          color: "#3730a3",
+                          textTransform: "uppercase",
+                        }}>
+                          A/B Test
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td style={{ padding: "12px 16px", textAlign: "right", fontSize: "14px" }}>{c.recipientCount}</td>
                   <td style={{ padding: "12px 16px", textAlign: "right", fontSize: "14px" }}>
@@ -747,65 +961,184 @@ export default function EmailCampaignsPage() {
                       <p style={{ color: "#dc2626", fontSize: "12px", marginTop: "4px" }}>Campaign name cannot be only whitespace</p>
                     )}
                   </div>
-                  <div style={{ marginBottom: "20px" }}>
-                    <label htmlFor="email-subject" style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "6px", color: "#374151" }}>
-                      Email Subject Line
+
+                  {/* A/B Test Toggle */}
+                  <div style={{ marginBottom: "20px", padding: "12px", backgroundColor: "#f9fafb", borderRadius: "8px", border: "1px solid #e5e7eb" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={isAbTest}
+                        onChange={(e) => {
+                          setIsAbTest(e.target.checked);
+                          if (e.target.checked) {
+                            setVariantASubject(subject);
+                            setVariantBSubject(subject);
+                            setVariantAContent(htmlContent);
+                            setVariantBContent(htmlContent);
+                          }
+                        }}
+                        style={{ width: "18px", height: "18px", accentColor: "#3b82f6" }}
+                      />
+                      <span style={{ fontSize: "14px", fontWeight: "500", color: "#374151" }}>Enable A/B Testing</span>
+                      <span style={{ fontSize: "12px", color: "#6b7280", marginLeft: "4px" }}>(Test 2 subject lines or content variations)</span>
                     </label>
-                    <input
-                      id="email-subject"
-                      type="text"
-                      value={subject}
-                      onChange={(e) => setSubject(e.target.value)}
-                      placeholder="e.g., Don't miss our biggest sale of the year!"
-                      style={{
-                        width: "100%",
-                        padding: "10px 12px",
-                        fontSize: "14px",
-                        border: "1px solid #d1d5db",
-                        borderRadius: "6px",
-                        outline: "none",
-                        boxSizing: "border-box",
-                      }}
-                    />
-                    {subject.length > 0 && subject.trim().length === 0 && (
-                      <p style={{ color: "#dc2626", fontSize: "12px", marginTop: "4px" }}>Subject line cannot be only whitespace</p>
-                    )}
                   </div>
+
+                  {!isAbTest ? (
+                    <div style={{ marginBottom: "20px" }}>
+                      <label htmlFor="email-subject" style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "6px", color: "#374151" }}>
+                        Email Subject Line
+                      </label>
+                      <input
+                        id="email-subject"
+                        type="text"
+                        value={subject}
+                        onChange={(e) => setSubject(e.target.value)}
+                        placeholder="e.g., Don't miss our biggest sale of the year!"
+                        style={{
+                          width: "100%",
+                          padding: "10px 12px",
+                          fontSize: "14px",
+                          border: "1px solid #d1d5db",
+                          borderRadius: "6px",
+                          outline: "none",
+                          boxSizing: "border-box",
+                        }}
+                      />
+                      {subject.length > 0 && subject.trim().length === 0 && (
+                        <p style={{ color: "#dc2626", fontSize: "12px", marginTop: "4px" }}>Subject line cannot be only whitespace</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                      <div style={{ padding: "16px", backgroundColor: "#eff6ff", borderRadius: "8px", border: "1px solid #bfdbfe" }}>
+                        <label style={{ display: "block", fontSize: "14px", fontWeight: "600", marginBottom: "8px", color: "#1e40af" }}>
+                          Variant A (50%)
+                        </label>
+                        <input
+                          type="text"
+                          value={variantASubject}
+                          onChange={(e) => setVariantASubject(e.target.value)}
+                          placeholder="Subject line A"
+                          style={{
+                            width: "100%",
+                            padding: "10px 12px",
+                            fontSize: "14px",
+                            border: "1px solid #d1d5db",
+                            borderRadius: "6px",
+                            outline: "none",
+                            boxSizing: "border-box",
+                            marginBottom: "8px",
+                          }}
+                        />
+                      </div>
+                      <div style={{ padding: "16px", backgroundColor: "#fef3c7", borderRadius: "8px", border: "1px solid #fde68a" }}>
+                        <label style={{ display: "block", fontSize: "14px", fontWeight: "600", marginBottom: "8px", color: "#92400e" }}>
+                          Variant B (50%)
+                        </label>
+                        <input
+                          type="text"
+                          value={variantBSubject}
+                          onChange={(e) => setVariantBSubject(e.target.value)}
+                          placeholder="Subject line B"
+                          style={{
+                            width: "100%",
+                            padding: "10px 12px",
+                            fontSize: "14px",
+                            border: "1px solid #d1d5db",
+                            borderRadius: "6px",
+                            outline: "none",
+                            boxSizing: "border-box",
+                            marginBottom: "8px",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* --- Content Step (Task 7.3) --- */}
               {currentStep === "content" && (
                 <div>
-                  <div style={{ marginBottom: "20px" }}>
-                    <label htmlFor="html-content" style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "6px", color: "#374151" }}>
-                      Email HTML Content
-                    </label>
-                    <p style={{ fontSize: "12px", color: "#6b7280", marginBottom: "8px" }}>
-                      Paste or write your email HTML content below.
-                    </p>
-                    <textarea
-                      id="html-content"
-                      value={htmlContent}
-                      onChange={(e) => setHtmlContent(e.target.value)}
-                      placeholder="<h1>Hello!</h1><p>Your email content here...</p>"
-                      rows={12}
-                      style={{
-                        width: "100%",
-                        padding: "10px 12px",
-                        fontSize: "13px",
-                        fontFamily: "monospace",
-                        border: "1px solid #d1d5db",
-                        borderRadius: "6px",
-                        outline: "none",
-                        resize: "vertical",
-                        boxSizing: "border-box",
-                      }}
-                    />
-                    {htmlContent.length > 0 && htmlContent.trim().length === 0 && (
-                      <p style={{ color: "#dc2626", fontSize: "12px", marginTop: "4px" }}>Content cannot be only whitespace</p>
-                    )}
-                  </div>
+                  {!isAbTest ? (
+                    <div style={{ marginBottom: "20px" }}>
+                      <label htmlFor="html-content" style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "6px", color: "#374151" }}>
+                        Email HTML Content
+                      </label>
+                      <p style={{ fontSize: "12px", color: "#6b7280", marginBottom: "8px" }}>
+                        Paste or write your email HTML content below.
+                      </p>
+                      <textarea
+                        id="html-content"
+                        value={htmlContent}
+                        onChange={(e) => setHtmlContent(e.target.value)}
+                        placeholder="<h1>Hello!</h1><p>Your email content here...</p>"
+                        rows={12}
+                        style={{
+                          width: "100%",
+                          padding: "10px 12px",
+                          fontSize: "13px",
+                          fontFamily: "monospace",
+                          border: "1px solid #d1d5db",
+                          borderRadius: "6px",
+                          outline: "none",
+                          resize: "vertical",
+                          boxSizing: "border-box",
+                        }}
+                      />
+                      {htmlContent.length > 0 && htmlContent.trim().length === 0 && (
+                        <p style={{ color: "#dc2626", fontSize: "12px", marginTop: "4px" }}>Content cannot be only whitespace</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                      <div style={{ padding: "16px", backgroundColor: "#eff6ff", borderRadius: "8px", border: "1px solid #bfdbfe" }}>
+                        <label style={{ display: "block", fontSize: "14px", fontWeight: "600", marginBottom: "8px", color: "#1e40af" }}>
+                          Variant A Content
+                        </label>
+                        <textarea
+                          value={variantAContent}
+                          onChange={(e) => setVariantAContent(e.target.value)}
+                          placeholder="<h1>Hello!</h1><p>Variant A content...</p>"
+                          rows={10}
+                          style={{
+                            width: "100%",
+                            padding: "10px 12px",
+                            fontSize: "13px",
+                            fontFamily: "monospace",
+                            border: "1px solid #d1d5db",
+                            borderRadius: "6px",
+                            outline: "none",
+                            resize: "vertical",
+                            boxSizing: "border-box",
+                          }}
+                        />
+                      </div>
+                      <div style={{ padding: "16px", backgroundColor: "#fef3c7", borderRadius: "8px", border: "1px solid #fde68a" }}>
+                        <label style={{ display: "block", fontSize: "14px", fontWeight: "600", marginBottom: "8px", color: "#92400e" }}>
+                          Variant B Content
+                        </label>
+                        <textarea
+                          value={variantBContent}
+                          onChange={(e) => setVariantBContent(e.target.value)}
+                          placeholder="<h1>Hello!</h1><p>Variant B content...</p>"
+                          rows={10}
+                          style={{
+                            width: "100%",
+                            padding: "10px 12px",
+                            fontSize: "13px",
+                            fontFamily: "monospace",
+                            border: "1px solid #d1d5db",
+                            borderRadius: "6px",
+                            outline: "none",
+                            resize: "vertical",
+                            boxSizing: "border-box",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1046,17 +1379,34 @@ export default function EmailCampaignsPage() {
                         <p style={{ fontSize: "12px", color: "#6b7280", margin: "0 0 4px" }}>Campaign Name</p>
                         <p style={{ fontSize: "14px", fontWeight: "500", margin: 0, color: "#1f2937" }}>{campaignName}</p>
                       </div>
-                      <div style={{ padding: "12px", backgroundColor: "#f9fafb", borderRadius: "6px" }}>
-                        <p style={{ fontSize: "12px", color: "#6b7280", margin: "0 0 4px" }}>Subject Line</p>
-                        <p style={{ fontSize: "14px", fontWeight: "500", margin: 0, color: "#1f2937" }}>{subject}</p>
-                      </div>
-                      <div style={{ padding: "12px", backgroundColor: "#f9fafb", borderRadius: "6px" }}>
-                        <p style={{ fontSize: "12px", color: "#6b7280", margin: "0 0 4px" }}>Content Preview</p>
-                        <div
-                          style={{ fontSize: "13px", color: "#374151", maxHeight: "120px", overflow: "auto", marginTop: "4px" }}
-                          dangerouslySetInnerHTML={{ __html: htmlContent.substring(0, 500) }}
-                        />
-                      </div>
+                      {isAbTest ? (
+                        <>
+                          <div style={{ padding: "12px", backgroundColor: "#eff6ff", borderRadius: "6px", border: "1px solid #bfdbfe" }}>
+                            <p style={{ fontSize: "12px", color: "#1e40af", margin: "0 0 4px", fontWeight: "600" }}>Variant A</p>
+                            <p style={{ fontSize: "14px", fontWeight: "500", margin: "0 0 4px", color: "#1f2937" }}>{variantASubject}</p>
+                            <div style={{ fontSize: "12px", color: "#6b7280" }} dangerouslySetInnerHTML={{ __html: variantAContent.substring(0, 200) }} />
+                          </div>
+                          <div style={{ padding: "12px", backgroundColor: "#fef3c7", borderRadius: "6px", border: "1px solid #fde68a" }}>
+                            <p style={{ fontSize: "12px", color: "#92400e", margin: "0 0 4px", fontWeight: "600" }}>Variant B</p>
+                            <p style={{ fontSize: "14px", fontWeight: "500", margin: "0 0 4px", color: "#1f2937" }}>{variantBSubject}</p>
+                            <div style={{ fontSize: "12px", color: "#6b7280" }} dangerouslySetInnerHTML={{ __html: variantBContent.substring(0, 200) }} />
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div style={{ padding: "12px", backgroundColor: "#f9fafb", borderRadius: "6px" }}>
+                            <p style={{ fontSize: "12px", color: "#6b7280", margin: "0 0 4px" }}>Subject Line</p>
+                            <p style={{ fontSize: "14px", fontWeight: "500", margin: 0, color: "#1f2937" }}>{subject}</p>
+                          </div>
+                          <div style={{ padding: "12px", backgroundColor: "#f9fafb", borderRadius: "6px" }}>
+                            <p style={{ fontSize: "12px", color: "#6b7280", margin: "0 0 4px" }}>Content Preview</p>
+                            <div
+                              style={{ fontSize: "13px", color: "#374151", maxHeight: "120px", overflow: "auto", marginTop: "4px" }}
+                              dangerouslySetInnerHTML={{ __html: htmlContent.substring(0, 500) }}
+                            />
+                          </div>
+                        </>
+                      )}
                       <div style={{ padding: "12px", backgroundColor: "#f9fafb", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div>
                           <p style={{ fontSize: "12px", color: "#6b7280", margin: "0 0 4px" }}>Recipients</p>
@@ -1139,7 +1489,7 @@ export default function EmailCampaignsPage() {
                       cursor: sending ? "not-allowed" : "pointer",
                     }}
                   >
-                    {sending ? "Sending..." : "Send Campaign"}
+                    {sending ? "Sending..." : isAbTest ? "Send A/B Test" : "Send Campaign"}
                   </button>
                 )}
               </div>

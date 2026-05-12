@@ -3,7 +3,7 @@
 
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useActionData, useLoaderData, useSubmit } from "@remix-run/react";
+import { useActionData, useLoaderData, useSubmit, Link, useLocation } from "@remix-run/react";
 import { useState } from "react";
 import { authenticate } from "~/shopify.server";
 import { db } from "~/db.server";
@@ -148,6 +148,42 @@ const DEFAULT_BLOCKS: EmailBlock[] = [
   { type: "button", text: "Shop Now", url: "https://example.com" },
 ];
 
+const EMAIL_NAV = [
+  { label: "Campaigns", path: "/app/email/campaigns" },
+  { label: "Templates", path: "/app/email/templates" },
+  { label: "Automations", path: "/app/email/automations" },
+  { label: "Subscribers", path: "/app/email/subscribers" },
+  { label: "Signup Forms", path: "/app/email/signup-forms" },
+];
+
+function EmailNav() {
+  const location = useLocation();
+  return (
+    <div style={{ display: "flex", gap: "4px", marginBottom: "24px", borderBottom: "1px solid #e5e7eb", paddingBottom: "12px" }}>
+      {EMAIL_NAV.map((item) => {
+        const isActive = location.pathname === item.path;
+        return (
+          <Link
+            key={item.path}
+            to={item.path}
+            style={{
+              padding: "8px 16px",
+              fontSize: "14px",
+              fontWeight: isActive ? "600" : "400",
+              color: isActive ? "#3b82f6" : "#6b7280",
+              borderBottom: isActive ? "2px solid #3b82f6" : "2px solid transparent",
+              textDecoration: "none",
+              marginBottom: "-14px",
+            }}
+          >
+            {item.label}
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function EmailTemplatesPage() {
   const { campaigns, prebuiltTemplates } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
@@ -212,6 +248,7 @@ export default function EmailTemplatesPage() {
 
   return (
     <div style={{ padding: "24px", maxWidth: "1200px", margin: "0 auto" }}>
+      <EmailNav />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
         <h1 style={{ fontSize: "24px", fontWeight: "bold" }}>Email Templates</h1>
         <button
