@@ -37,7 +37,10 @@
     "@types/node": "^25.6.2",
     "@types/pg": "^8.20.0",
     "@vitest/coverage-v8": "^4.1.5",
+    "autoprefixer": "^10.4.21",
     "fast-check": "^4.7.0",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17",
     "typescript": "^5.9.3",
     "vite": "^6.4.2",
     "vitest": "^4.1.5"
@@ -46,11 +49,11 @@
     "@aws-sdk/client-s3": "^3.1045.0",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
-    "@socket.io/redis-adapter": "^8.3.0",
+    "@remix-run/serve": "^2.17.4",
     "@shopify/polaris": "^13.9.5",
-    "dotenv": "^16.5.0",
-    "tsx": "^4.19.4",
+    "@socket.io/redis-adapter": "^8.3.0",
     "bullmq": "^5.76.6",
+    "dotenv": "^16.5.0",
     "groq-sdk": "^1.1.2",
     "ioredis": "^5.10.1",
     "isbot": "^5.1.40",
@@ -59,6 +62,7 @@
     "prisma": "^7.8.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "socket.io": "^4.8.3"
+    "socket.io": "^4.8.3",
+    "tsx": "^4.19.4"
   }
 }

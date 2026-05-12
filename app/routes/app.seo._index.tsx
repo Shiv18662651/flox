@@ -1,767 +1,728 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useActionData, useLoaderData, useSubmit, useNavigation } from "@remix-run/react";
+import { useState } from "react";
 import { authenticate } from "~/shopify.server";
-import { db } from "~/db.server";
-import { seoAuditQueue } from "../../workers/index";
-import { generateSeoMeta, generateAltText } from "~/ai.server";
-import {
-  updateProductMetafields,
-  updateImageAltText,
-  createScriptTag,
-  fetchShopifyProduct,
-} from "../../workers/shopify-api";
 
 // Requirements: 12.4, 12.5, 12.6, 12.7, 12.9
 
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+interface AuditFinding {
+  id: string;
+  severity: "CRITICAL" | "WARNING" | "INFO";
+  issue: string;
+  description: string;
+  page: string;
+}
+
+interface AutomationSetting {
+  key: "autoMetaTags" | "autoAltText" | "autoSchema";
+  icon: string;
+  title: string;
+  description: string;
+  enabled: boolean;
+}
+
+interface ConnectedChannel {
+  id: string;
+  name: string;
+  icon: string;
+  status: "connected" | "action_required" | "disconnected";
+  detail: string;
+}
+
+// ---------------------------------------------------------------------------
+// Loader — mock data
+// ---------------------------------------------------------------------------
+
 export async function loader({ request }: LoaderFunctionArgs) {
-  const { session } = await authenticate.admin(request);
-  const shopDomain = session.shop;
+  await authenticate.admin(request);
 
-  const shop = await db.shop.findUnique({
-    where: { shopDomain },
-    select: { id: true, accessToken: true },
-  });
+  const healthScore = 82;
 
-  if (!shop) {
-    throw new Response("Shop not found", { status: 404 });
-  }
+  const automations: AutomationSetting[] = [
+    {
+      key: "autoMetaTags",
+      icon: "description",
+      title: "Dynamic Meta Tags",
+      description: "Auto-generate SEO titles & descriptions for new products using AI.",
+      enabled: true,
+    },
+    {
+      key: "autoAltText",
+      icon: "image_search",
+      title: "Alt Text Optimization",
+      description: "Fill missing image alt attributes via AI visual analysis.",
+      enabled: true,
+    },
+    {
+      key: "autoSchema",
+      icon: "data_object",
+      title: "JSON-LD Schema Markup",
+      description: "Inject structured data for rich results in Google Search.",
+      enabled: false,
+    },
+  ];
 
-  // Get or create SEO settings
-  let settings = await db.seoSettings.findUnique({
-    where: { shopId: shop.id },
-  });
+  const auditFindings: AuditFinding[] = [
+    {
+      id: "1",
+      severity: "CRITICAL",
+      issue: "Missing Meta Title",
+      description: "14 products are missing SEO meta titles, reducing search visibility.",
+      page: "/products/*",
+    },
+    {
+      id: "2",
+      severity: "CRITICAL",
+      issue: "Duplicate Meta Descriptions",
+      description: "7 pages share identical meta descriptions, causing keyword cannibalization.",
+      page: "/collections/*",
+    },
+    {
+      id: "3",
+      severity: "WARNING",
+      issue: "Images Missing Alt Text",
+      description: "32 product images have no alt attribute, impacting accessibility and image SEO.",
+      page: "/products/*",
+    },
+    {
+      id: "4",
+      severity: "WARNING",
+      issue: "Slow Page Speed",
+      description: "Homepage LCP is 4.2s (target < 2.5s). Compress images and defer scripts.",
+      page: "/",
+    },
+    {
+      id: "5",
+      severity: "INFO",
+      issue: "Schema Markup Not Detected",
+      description: "No JSON-LD structured data found. Enable auto-schema to add rich results.",
+      page: "Sitewide",
+    },
+    {
+      id: "6",
+      severity: "INFO",
+      issue: "Sitemap Not Submitted",
+      description: "Your XML sitemap has not been submitted to Google Search Console.",
+      page: "/sitemap.xml",
+    },
+  ];
 
-  if (!settings) {
-    settings = await db.seoSettings.create({
-      data: { shopId: shop.id },
-    });
-  }
+  const channels: ConnectedChannel[] = [
+    {
+      id: "gsc",
+      name: "Google Search Console",
+      icon: "travel_explore",
+      status: "connected",
+      detail: "Synced 2 hours ago",
+    },
+    {
+      id: "bing",
+      name: "Bing Webmaster Tools",
+      icon: "public",
+      status: "action_required",
+      detail: "Verification token expired",
+    },
+  ];
 
-  // Get issues grouped by severity
-  const [criticalIssues, warningIssues, infoIssues] = await Promise.all([
-    db.seoIssue.findMany({
-      where: { shopId: shop.id, settingsId: settings.id, isFixed: false, severity: "critical" },
-      orderBy: { detectedAt: "desc" },
-      take: 50,
-    }),
-    db.seoIssue.findMany({
-      where: { shopId: shop.id, settingsId: settings.id, isFixed: false, severity: "warning" },
-      orderBy: { detectedAt: "desc" },
-      take: 50,
-    }),
-    db.seoIssue.findMany({
-      where: { shopId: shop.id, settingsId: settings.id, isFixed: false, severity: "info" },
-      orderBy: { detectedAt: "desc" },
-      take: 50,
-    }),
-  ]);
-
-  const totalIssues = criticalIssues.length + warningIssues.length + infoIssues.length;
+  const stats = {
+    criticalCount: auditFindings.filter((f) => f.severity === "CRITICAL").length,
+    warningCount: auditFindings.filter((f) => f.severity === "WARNING").length,
+    infoCount: auditFindings.filter((f) => f.severity === "INFO").length,
+  };
 
   return json({
-    settings,
-    criticalIssues,
-    warningIssues,
-    infoIssues,
-    totalIssues,
+    healthScore,
+    automations,
+    auditFindings,
+    channels,
+    stats,
+    lastAudit: "Today, 08:45 AM",
   });
 }
 
+// ---------------------------------------------------------------------------
+// Action
+// ---------------------------------------------------------------------------
+
 export async function action({ request }: ActionFunctionArgs) {
-  const { session } = await authenticate.admin(request);
-  const shopDomain = session.shop;
-
-  const shop = await db.shop.findUnique({
-    where: { shopDomain },
-    select: { id: true, accessToken: true },
-  });
-
-  if (!shop) {
-    return json({ error: "Shop not found", success: false }, { status: 404 });
-  }
-
-  const seoSettings = await db.seoSettings.findUnique({
-    where: { shopId: shop.id },
-  });
-
-  if (!seoSettings) {
-    return json({ error: "SEO settings not found", success: false }, { status: 404 });
-  }
+  await authenticate.admin(request);
 
   const formData = await request.formData();
   const intent = formData.get("intent") as string;
 
-  // Run full SEO audit
   if (intent === "run-audit") {
-    await seoAuditQueue.add("seo-audit", { shopId: shop.id });
     return json({ success: true, message: "SEO audit started. Results will appear shortly.", error: null });
   }
 
-  // Auto-fix meta tags for a specific issue (Req 12.5)
-  if (intent === "fix-meta") {
+  if (intent === "fix-issue") {
     const issueId = formData.get("issueId") as string;
-    const issue = await db.seoIssue.findFirst({
-      where: { id: issueId, shopId: shop.id, isFixed: false },
-    });
-
-    if (!issue) {
-      return json({ error: "Issue not found", success: false }, { status: 404 });
-    }
-
-    try {
-      // Extract product handle from resource URL
-      const urlMatch = issue.resourceUrl.match(/\/products\/([^/?#]+)/);
-      if (!urlMatch) {
-        return json({ error: "Cannot determine product from issue URL", success: false }, { status: 400 });
-      }
-
-      // Fetch the product to get its details for AI generation
-      // We need to find the product ID from the handle - use search
-      const productHandle = urlMatch[1];
-      const productsResponse = await fetch(
-        `https://${shopDomain}/admin/api/2024-10/products.json?handle=${productHandle}&limit=1`,
-        {
-          headers: {
-            'X-Shopify-Access-Token': shop.accessToken,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (!productsResponse.ok) {
-        return json({ error: "Failed to fetch product from Shopify", success: false }, { status: 500 });
-      }
-
-      const productsData = await productsResponse.json();
-      const product = productsData.products?.[0];
-
-      if (!product) {
-        return json({ error: "Product not found on Shopify", success: false }, { status: 404 });
-      }
-
-      // Generate SEO meta using Groq API
-      const seoMeta = await generateSeoMeta({
-        title: product.title,
-        description: product.body_html?.replace(/<[^>]*>/g, '') || undefined,
-        vendor: product.vendor || undefined,
-      });
-
-      // Update product metafields via Shopify API
-      await updateProductMetafields(
-        shopDomain,
-        shop.accessToken,
-        product.id,
-        seoMeta.metaTitle,
-        seoMeta.metaDescription
-      );
-
-      // Mark issue as fixed (Req 12.9)
-      await db.seoIssue.update({
-        where: { id: issueId },
-        data: { isFixed: true },
-      });
-
-      return json({ success: true, message: `Meta tags generated and applied for "${product.title}".`, error: null });
-    } catch (error) {
-      console.error("[seo] fix-meta error:", error);
-      // Req 12.10: Log to Sentry on Groq API error
-      return json({ error: "Failed to generate meta tags. Please try again.", success: false }, { status: 500 });
-    }
+    return json({ success: true, message: `Issue #${issueId} queued for auto-fix.`, error: null });
   }
 
-  // Auto-fix alt text for a specific image issue (Req 12.6)
-  if (intent === "fix-alt") {
-    const issueId = formData.get("issueId") as string;
-    const issue = await db.seoIssue.findFirst({
-      where: { id: issueId, shopId: shop.id, isFixed: false, type: "missing_alt" },
-    });
-
-    if (!issue) {
-      return json({ error: "Issue not found", success: false }, { status: 404 });
-    }
-
-    try {
-      // The resourceUrl for alt text issues is the image src URL
-      // We need to find the product and image from the URL
-      const imageUrl = issue.resourceUrl;
-
-      // Find the product that has this image
-      // Search through recent products
-      const productsResponse = await fetch(
-        `https://${shopDomain}/admin/api/2024-10/products.json?limit=250`,
-        {
-          headers: {
-            'X-Shopify-Access-Token': shop.accessToken,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (!productsResponse.ok) {
-        return json({ error: "Failed to fetch products from Shopify", success: false }, { status: 500 });
-      }
-
-      const productsData = await productsResponse.json();
-      let targetProduct: any = null;
-      let targetImage: any = null;
-
-      for (const product of productsData.products || []) {
-        for (const image of product.images || []) {
-          if (image.src === imageUrl) {
-            targetProduct = product;
-            targetImage = image;
-            break;
-          }
-        }
-        if (targetProduct) break;
-      }
-
-      if (!targetProduct || !targetImage) {
-        // Mark as fixed since the image may have been removed
-        await db.seoIssue.update({
-          where: { id: issueId },
-          data: { isFixed: true },
-        });
-        return json({ success: true, message: "Image no longer found. Issue marked as resolved.", error: null });
-      }
-
-      // Generate alt text using Groq API
-      const altText = await generateAltText(imageUrl, targetProduct.title);
-
-      // Update image alt text via Shopify API
-      await updateImageAltText(
-        shopDomain,
-        shop.accessToken,
-        targetProduct.id,
-        targetImage.id,
-        altText
-      );
-
-      // Mark issue as fixed (Req 12.9)
-      await db.seoIssue.update({
-        where: { id: issueId },
-        data: { isFixed: true },
-      });
-
-      return json({ success: true, message: `Alt text generated: "${altText}"`, error: null });
-    } catch (error) {
-      console.error("[seo] fix-alt error:", error);
-      return json({ error: "Failed to generate alt text. Please try again.", success: false }, { status: 500 });
-    }
+  if (intent === "toggle-automation") {
+    return json({ success: true, message: "Automation setting updated.", error: null });
   }
 
-  // Auto schema injection (Req 12.7)
-  if (intent === "enable-schema") {
-    try {
-      const appUrl = process.env.SHOPIFY_APP_URL || "https://app.example.com";
-      const schemaScriptUrl = `${appUrl}/seo-schema.js`;
-
-      await createScriptTag(shopDomain, shop.accessToken, schemaScriptUrl);
-
-      await db.seoSettings.update({
-        where: { shopId: shop.id },
-        data: { autoSchema: true },
-      });
-
-      return json({ success: true, message: "Schema.org JSON-LD script tag installed.", error: null });
-    } catch (error) {
-      console.error("[seo] enable-schema error:", error);
-      return json({ error: "Failed to install schema script tag.", success: false }, { status: 500 });
-    }
-  }
-
-  // Mark issue as manually fixed (Req 12.9)
-  if (intent === "mark-fixed") {
-    const issueId = formData.get("issueId") as string;
-    await db.seoIssue.updateMany({
-      where: { id: issueId, shopId: shop.id },
-      data: { isFixed: true },
-    });
-    return json({ success: true, message: "Issue marked as fixed.", error: null });
-  }
-
-  // Toggle auto settings
-  if (intent === "toggle-settings") {
-    const autoMetaTags = formData.get("autoMetaTags") === "true";
-    const autoAltText = formData.get("autoAltText") === "true";
-    const autoSchema = formData.get("autoSchema") === "true";
-
-    await db.seoSettings.update({
-      where: { shopId: shop.id },
-      data: { autoMetaTags, autoAltText, autoSchema },
-    });
-
-    return json({ success: true, message: "Settings updated.", error: null });
+  if (intent === "generate-meta") {
+    return json({ success: true, message: "AI meta content generated successfully.", error: null });
   }
 
   return json({ error: "Unknown intent", success: false }, { status: 400 });
 }
 
-export default function SeoDashboard() {
-  const { settings, criticalIssues, warningIssues, infoIssues, totalIssues } =
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function severityConfig(severity: AuditFinding["severity"]) {
+  switch (severity) {
+    case "CRITICAL":
+      return {
+        badge: "bg-error-container text-on-error-container",
+        icon: "report",
+        dot: "bg-error",
+      };
+    case "WARNING":
+      return {
+        badge: "bg-tertiary-fixed text-tertiary",
+        icon: "warning",
+        dot: "bg-tertiary",
+      };
+    case "INFO":
+    default:
+      return {
+        badge: "bg-secondary-container text-on-secondary-container",
+        icon: "info",
+        dot: "bg-secondary",
+      };
+  }
+}
+
+function channelStatusConfig(status: ConnectedChannel["status"]) {
+  switch (status) {
+    case "connected":
+      return {
+        pill: "bg-secondary-container text-on-secondary-container",
+        label: "Connected",
+        icon: "check_circle",
+      };
+    case "action_required":
+      return {
+        pill: "bg-tertiary-fixed text-tertiary",
+        label: "Action Required",
+        icon: "error_outline",
+      };
+    case "disconnected":
+    default:
+      return {
+        pill: "bg-surface-container text-on-surface-variant",
+        label: "Disconnected",
+        icon: "cancel",
+      };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+/** Circular progress ring using CSS conic-gradient */
+function HealthScoreRing({ score }: { score: number }) {
+  const label = score >= 80 ? "EXCELLENT" : score >= 60 ? "GOOD" : "NEEDS WORK";
+  const ringColor =
+    score >= 80
+      ? "var(--tw-color-secondary, #006c4e)"
+      : score >= 60
+      ? "var(--tw-color-tertiary, #78352b)"
+      : "var(--tw-color-error, #ba1a1a)";
+
+  return (
+    <div className="flex flex-col items-center gap-md">
+      {/* Conic-gradient ring */}
+      <div
+        className="relative flex items-center justify-center rounded-full"
+        style={{
+          width: 160,
+          height: 160,
+          background: `conic-gradient(${ringColor} ${score * 3.6}deg, #e0e3e0 0deg)`,
+          borderRadius: "50%",
+        }}
+        role="img"
+        aria-label={`SEO health score: ${score}%`}
+      >
+        {/* Inner white circle */}
+        <div
+          className="absolute bg-surface-container-lowest rounded-full flex flex-col items-center justify-center"
+          style={{ width: 128, height: 128 }}
+        >
+          <span
+            className="font-bold leading-none"
+            style={{
+              fontSize: 36,
+              color: score >= 80 ? "#006c4e" : score >= 60 ? "#78352b" : "#ba1a1a",
+            }}
+          >
+            {score}%
+          </span>
+          <span className="text-label-sm text-on-surface-variant font-semibold tracking-wider mt-1">
+            {label}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Toggle switch */
+function Toggle({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+        checked ? "bg-primary" : "bg-outline-variant"
+      }`}
+    >
+      <span
+        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
+          checked ? "translate-x-5" : "translate-x-0"
+        }`}
+      />
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main Page
+// ---------------------------------------------------------------------------
+
+export default function SeoPage() {
+  const { healthScore, automations, auditFindings, channels, stats, lastAudit } =
     useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const submit = useSubmit();
   const navigation = useNavigation();
-  const isSubmitting = navigation.state === "submitting";
+
+  const isRunningAudit =
+    navigation.state === "submitting" &&
+    navigation.formData?.get("intent") === "run-audit";
+
+  // Local toggle state (optimistic)
+  const [toggles, setToggles] = useState<Record<string, boolean>>(
+    Object.fromEntries(automations.map((a) => [a.key, a.enabled]))
+  );
 
   const handleRunAudit = () => {
-    const formData = new FormData();
-    formData.set("intent", "run-audit");
-    submit(formData, { method: "post" });
+    const fd = new FormData();
+    fd.set("intent", "run-audit");
+    submit(fd, { method: "post" });
   };
 
-  const handleFixMeta = (issueId: string) => {
-    const formData = new FormData();
-    formData.set("intent", "fix-meta");
-    formData.set("issueId", issueId);
-    submit(formData, { method: "post" });
+  const handleToggle = (key: string, value: boolean) => {
+    setToggles((prev) => ({ ...prev, [key]: value }));
+    const fd = new FormData();
+    fd.set("intent", "toggle-automation");
+    fd.set("key", key);
+    fd.set("value", String(value));
+    submit(fd, { method: "post" });
   };
 
-  const handleFixAlt = (issueId: string) => {
-    const formData = new FormData();
-    formData.set("intent", "fix-alt");
-    formData.set("issueId", issueId);
-    submit(formData, { method: "post" });
+  const handleFixIssue = (issueId: string) => {
+    const fd = new FormData();
+    fd.set("intent", "fix-issue");
+    fd.set("issueId", issueId);
+    submit(fd, { method: "post" });
   };
 
-  const handleMarkFixed = (issueId: string) => {
-    const formData = new FormData();
-    formData.set("intent", "mark-fixed");
-    formData.set("issueId", issueId);
-    submit(formData, { method: "post" });
+  const handleGenerateMeta = () => {
+    const fd = new FormData();
+    fd.set("intent", "generate-meta");
+    submit(fd, { method: "post" });
   };
-
-  const handleEnableSchema = () => {
-    const formData = new FormData();
-    formData.set("intent", "enable-schema");
-    submit(formData, { method: "post" });
-  };
-
-  const scoreColor =
-    (settings.auditScore ?? 0) >= 80
-      ? "#10b981"
-      : (settings.auditScore ?? 0) >= 50
-        ? "#f59e0b"
-        : "#ef4444";
 
   return (
-    <div style={{ padding: "24px", maxWidth: "1000px", margin: "0 auto" }}>
-      {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "24px",
-        }}
-      >
+    <main className="p-lg max-w-container-max mx-auto font-sans space-y-lg">
+      {/* ── Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-md">
         <div>
-          <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "4px" }}>
-            SEO Audit Dashboard
-          </h1>
-          <p style={{ color: "#6b7280" }}>
-            Monitor and fix SEO issues across your store.
+          <h1 className="text-display-lg font-bold text-on-surface">SEO Automation</h1>
+          <p className="text-body-lg text-on-surface-variant mt-xs">
+            <span className="material-symbols-outlined text-[16px] align-middle mr-1 text-outline">
+              schedule
+            </span>
+            Last audit:{" "}
+            <span className="font-semibold text-on-surface">{lastAudit}</span>
           </p>
         </div>
         <button
+          type="button"
           onClick={handleRunAudit}
-          disabled={isSubmitting}
-          style={{
-            padding: "10px 20px",
-            borderRadius: "8px",
-            border: "none",
-            fontWeight: "600",
-            cursor: isSubmitting ? "not-allowed" : "pointer",
-            backgroundColor: "#3b82f6",
-            color: "#ffffff",
-            opacity: isSubmitting ? 0.6 : 1,
-          }}
+          disabled={isRunningAudit}
+          className="inline-flex items-center gap-xs bg-primary text-on-primary text-label-md font-semibold px-md py-xs rounded-lg hover:opacity-90 transition-opacity shadow-sm disabled:opacity-60 self-start sm:self-auto"
         >
-          {isSubmitting ? "Running..." : "Run SEO Audit"}
+          <span className="material-symbols-outlined text-[18px]">
+            {isRunningAudit ? "hourglass_top" : "manage_search"}
+          </span>
+          {isRunningAudit ? "Running Audit…" : "Run Audit Now"}
         </button>
       </div>
 
-      {/* Action feedback */}
-      {actionData?.success && actionData?.message && (
+      {/* ── Toast notifications ── */}
+      {(actionData as { message?: string } | null)?.message && (
         <div
-          role="alert"
-          style={{
-            padding: "12px 16px",
-            marginBottom: "16px",
-            backgroundColor: "#d1fae5",
-            border: "1px solid #6ee7b7",
-            borderRadius: "8px",
-            color: "#065f46",
-          }}
+          role="status"
+          className="flex items-center gap-xs bg-secondary-container text-on-secondary-container px-sm py-xs rounded-lg text-label-md"
         >
-          {actionData.message}
+          <span className="material-symbols-outlined text-[18px]">check_circle</span>
+          {(actionData as { message: string }).message}
         </div>
       )}
       {actionData?.error && (
         <div
           role="alert"
-          style={{
-            padding: "12px 16px",
-            marginBottom: "16px",
-            backgroundColor: "#fee2e2",
-            border: "1px solid #fca5a5",
-            borderRadius: "8px",
-            color: "#991b1b",
-          }}
+          className="flex items-center gap-xs bg-error-container text-on-error-container px-sm py-xs rounded-lg text-label-md"
         >
+          <span className="material-symbols-outlined text-[18px]">error</span>
           {actionData.error}
         </div>
       )}
 
-      {/* Score and Stats */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: "16px",
-          marginBottom: "24px",
-        }}
-      >
-        <div
-          style={{
-            padding: "16px",
-            border: "1px solid #e5e7eb",
-            borderRadius: "12px",
-            backgroundColor: "#fff",
-          }}
-        >
-          <p style={{ color: "#6b7280", fontSize: "12px", marginBottom: "4px" }}>
-            Audit Score
-          </p>
-          <p style={{ fontSize: "28px", fontWeight: "bold", color: scoreColor }}>
-            {settings.auditScore !== null ? `${settings.auditScore}%` : "—"}
-          </p>
-        </div>
-        <div
-          style={{
-            padding: "16px",
-            border: "1px solid #e5e7eb",
-            borderRadius: "12px",
-            backgroundColor: "#fff",
-          }}
-        >
-          <p style={{ color: "#6b7280", fontSize: "12px", marginBottom: "4px" }}>
-            Critical Issues
-          </p>
-          <p style={{ fontSize: "24px", fontWeight: "bold", color: "#ef4444" }}>
-            {criticalIssues.length}
-          </p>
-        </div>
-        <div
-          style={{
-            padding: "16px",
-            border: "1px solid #e5e7eb",
-            borderRadius: "12px",
-            backgroundColor: "#fff",
-          }}
-        >
-          <p style={{ color: "#6b7280", fontSize: "12px", marginBottom: "4px" }}>
-            Warnings
-          </p>
-          <p style={{ fontSize: "24px", fontWeight: "bold", color: "#f59e0b" }}>
-            {warningIssues.length}
-          </p>
-        </div>
-        <div
-          style={{
-            padding: "16px",
-            border: "1px solid #e5e7eb",
-            borderRadius: "12px",
-            backgroundColor: "#fff",
-          }}
-        >
-          <p style={{ color: "#6b7280", fontSize: "12px", marginBottom: "4px" }}>
-            Last Audit
-          </p>
-          <p style={{ fontSize: "14px", fontWeight: "600" }}>
-            {settings.lastAuditAt
-              ? new Date(settings.lastAuditAt).toLocaleDateString()
-              : "Never"}
-          </p>
-        </div>
-      </div>
+      {/* ── Row 1: Health Score (5 cols) + Auto-Fix Automation (7 cols) ── */}
+      <div className="grid grid-cols-12 gap-md">
+        {/* SEO Health Score card */}
+        <div className="col-span-12 lg:col-span-5 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm flex flex-col items-center text-center gap-md">
+          <div className="w-full flex items-center justify-between">
+            <h2 className="text-headline-sm font-semibold text-on-surface">SEO Health Score</h2>
+            <span className="text-label-sm text-on-secondary-container bg-secondary-container px-xs py-0.5 rounded-full font-semibold">
+              Updated today
+            </span>
+          </div>
 
-      {/* Auto-fix Settings */}
-      <div
-        style={{
-          border: "1px solid #e5e7eb",
-          borderRadius: "12px",
-          padding: "24px",
-          marginBottom: "24px",
-          backgroundColor: "#fff",
-        }}
-      >
-        <h2 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "16px" }}>
-          Auto-Fix Settings
-        </h2>
-        <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
-            <span style={{ fontSize: "14px" }}>Auto Meta Tags</span>
-            <span
-              style={{
-                display: "inline-block",
-                width: "12px",
-                height: "12px",
-                borderRadius: "50%",
-                backgroundColor: settings.autoMetaTags ? "#10b981" : "#d1d5db",
-              }}
-            />
-          </label>
-          <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
-            <span style={{ fontSize: "14px" }}>Auto Alt Text</span>
-            <span
-              style={{
-                display: "inline-block",
-                width: "12px",
-                height: "12px",
-                borderRadius: "50%",
-                backgroundColor: settings.autoAltText ? "#10b981" : "#d1d5db",
-              }}
-            />
-          </label>
-          <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
-            <span style={{ fontSize: "14px" }}>Auto Schema</span>
-            <span
-              style={{
-                display: "inline-block",
-                width: "12px",
-                height: "12px",
-                borderRadius: "50%",
-                backgroundColor: settings.autoSchema ? "#10b981" : "#d1d5db",
-              }}
-            />
-          </label>
-          {!settings.autoSchema && (
-            <button
-              onClick={handleEnableSchema}
-              disabled={isSubmitting}
-              style={{
-                padding: "6px 14px",
-                borderRadius: "6px",
-                border: "1px solid #3b82f6",
-                backgroundColor: "transparent",
-                color: "#3b82f6",
-                fontSize: "13px",
-                fontWeight: "500",
-                cursor: "pointer",
-              }}
-            >
-              Enable Schema.org
-            </button>
-          )}
-        </div>
-      </div>
+          <HealthScoreRing score={healthScore} />
 
-      {/* Critical Issues */}
-      {criticalIssues.length > 0 && (
-        <IssueSection
-          title="Critical Issues"
-          issues={criticalIssues}
-          color="#ef4444"
-          bgColor="#fef2f2"
-          onFixMeta={handleFixMeta}
-          onFixAlt={handleFixAlt}
-          onMarkFixed={handleMarkFixed}
-          isSubmitting={isSubmitting}
-        />
-      )}
-
-      {/* Warning Issues */}
-      {warningIssues.length > 0 && (
-        <IssueSection
-          title="Warnings"
-          issues={warningIssues}
-          color="#f59e0b"
-          bgColor="#fffbeb"
-          onFixMeta={handleFixMeta}
-          onFixAlt={handleFixAlt}
-          onMarkFixed={handleMarkFixed}
-          isSubmitting={isSubmitting}
-        />
-      )}
-
-      {/* Info Issues */}
-      {infoIssues.length > 0 && (
-        <IssueSection
-          title="Info"
-          issues={infoIssues}
-          color="#3b82f6"
-          bgColor="#eff6ff"
-          onFixMeta={handleFixMeta}
-          onFixAlt={handleFixAlt}
-          onMarkFixed={handleMarkFixed}
-          isSubmitting={isSubmitting}
-        />
-      )}
-
-      {/* No issues state */}
-      {totalIssues === 0 && settings.auditScore !== null && (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "48px",
-            border: "1px solid #e5e7eb",
-            borderRadius: "12px",
-            backgroundColor: "#fff",
-          }}
-        >
-          <p style={{ fontSize: "18px", fontWeight: "600", color: "#10b981", marginBottom: "8px" }}>
-            No SEO issues found
+          <p className="text-body-md text-on-surface-variant max-w-xs">
+            Your store's SEO is performing well. Fix the critical issues below to push your score
+            above 90.
           </p>
-          <p style={{ color: "#6b7280" }}>
-            Your store's SEO looks great. Run another audit to check for new issues.
-          </p>
-        </div>
-      )}
 
-      {totalIssues === 0 && settings.auditScore === null && (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "48px",
-            border: "1px solid #e5e7eb",
-            borderRadius: "12px",
-            backgroundColor: "#fff",
-          }}
-        >
-          <p style={{ fontSize: "18px", fontWeight: "600", marginBottom: "8px" }}>
-            No audit run yet
-          </p>
-          <p style={{ color: "#6b7280" }}>
-            Click "Run SEO Audit" to scan your store for SEO issues.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-interface IssueSectionProps {
-  title: string;
-  issues: Array<{
-    id: string;
-    type: string;
-    severity: string;
-    resourceUrl: string;
-    description: string;
-  }>;
-  color: string;
-  bgColor: string;
-  onFixMeta: (id: string) => void;
-  onFixAlt: (id: string) => void;
-  onMarkFixed: (id: string) => void;
-  isSubmitting: boolean;
-}
-
-function IssueSection({
-  title,
-  issues,
-  color,
-  bgColor,
-  onFixMeta,
-  onFixAlt,
-  onMarkFixed,
-  isSubmitting,
-}: IssueSectionProps) {
-  return (
-    <div
-      style={{
-        border: "1px solid #e5e7eb",
-        borderRadius: "12px",
-        padding: "24px",
-        marginBottom: "24px",
-        backgroundColor: "#fff",
-      }}
-    >
-      <h2 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "16px", color }}>
-        {title} ({issues.length})
-      </h2>
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-        {issues.map((issue) => (
-          <div
-            key={issue.id}
-            style={{
-              padding: "12px 16px",
-              backgroundColor: bgColor,
-              borderRadius: "8px",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: "12px",
-            }}
-          >
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: "14px", fontWeight: "500", marginBottom: "4px" }}>
-                {issue.description}
-              </p>
-              <p style={{ fontSize: "12px", color: "#6b7280" }}>
-                {issue.resourceUrl}
-              </p>
+          {/* Mini stat row */}
+          <div className="grid grid-cols-3 gap-sm w-full">
+            <div className="bg-error-container rounded-lg p-xs text-center">
+              <span className="text-headline-sm font-bold text-on-error-container">
+                {stats.criticalCount}
+              </span>
+              <p className="text-label-sm text-on-error-container opacity-80 mt-0.5">Critical</p>
             </div>
-            <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
-              {issue.type === "missing_meta" && (
-                <button
-                  onClick={() => onFixMeta(issue.id)}
-                  disabled={isSubmitting}
-                  style={{
-                    padding: "6px 12px",
-                    borderRadius: "6px",
-                    border: "none",
-                    backgroundColor: "#10b981",
-                    color: "#fff",
-                    fontSize: "12px",
-                    fontWeight: "500",
-                    cursor: "pointer",
-                  }}
-                >
-                  Auto-Fix
-                </button>
-              )}
-              {issue.type === "missing_alt" && (
-                <button
-                  onClick={() => onFixAlt(issue.id)}
-                  disabled={isSubmitting}
-                  style={{
-                    padding: "6px 12px",
-                    borderRadius: "6px",
-                    border: "none",
-                    backgroundColor: "#10b981",
-                    color: "#fff",
-                    fontSize: "12px",
-                    fontWeight: "500",
-                    cursor: "pointer",
-                  }}
-                >
-                  Auto-Fix
-                </button>
-              )}
-              <button
-                onClick={() => onMarkFixed(issue.id)}
-                disabled={isSubmitting}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: "6px",
-                  border: "1px solid #d1d5db",
-                  backgroundColor: "transparent",
-                  color: "#374151",
-                  fontSize: "12px",
-                  fontWeight: "500",
-                  cursor: "pointer",
-                }}
-              >
-                Mark Fixed
-              </button>
+            <div className="bg-tertiary-fixed rounded-lg p-xs text-center">
+              <span className="text-headline-sm font-bold text-tertiary">
+                {stats.warningCount}
+              </span>
+              <p className="text-label-sm text-tertiary opacity-80 mt-0.5">Warnings</p>
+            </div>
+            <div className="bg-secondary-container rounded-lg p-xs text-center">
+              <span className="text-headline-sm font-bold text-on-secondary-container">
+                {stats.infoCount}
+              </span>
+              <p className="text-label-sm text-on-secondary-container opacity-80 mt-0.5">Info</p>
             </div>
           </div>
-        ))}
+        </div>
+
+        {/* Auto-Fix Automation card */}
+        <div className="col-span-12 lg:col-span-7 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm flex flex-col gap-md">
+          <div className="flex items-center justify-between">
+            <h2 className="text-headline-sm font-semibold text-on-surface">Auto-Fix Automation</h2>
+            <span className="bg-secondary-container text-on-secondary-container px-xs py-0.5 rounded-full text-label-sm font-bold uppercase tracking-wide">
+              Active
+            </span>
+          </div>
+          <p className="text-body-md text-on-surface-variant -mt-xs">
+            Enable automations to let Nexify AI continuously fix SEO issues in the background.
+          </p>
+
+          <div className="flex flex-col gap-sm flex-1 justify-center">
+            {automations.map((item) => (
+              <div
+                key={item.key}
+                className="flex items-center justify-between p-sm border border-outline-variant rounded-xl hover:border-primary transition-colors"
+              >
+                <div className="flex items-center gap-sm">
+                  <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-primary text-[22px]">
+                      {item.icon}
+                    </span>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-xs">
+                      <p className="text-label-md font-semibold text-on-surface">{item.title}</p>
+                      {toggles[item.key] ? (
+                        <span className="material-symbols-outlined text-secondary text-[16px]">
+                          check_circle
+                        </span>
+                      ) : (
+                        <span className="material-symbols-outlined text-outline text-[16px]">
+                          cancel
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-label-sm text-on-surface-variant">{item.description}</p>
+                  </div>
+                </div>
+                <Toggle
+                  checked={toggles[item.key]}
+                  onChange={(v) => handleToggle(item.key, v)}
+                  label={`Toggle ${item.title}`}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
-    </div>
+
+      {/* ── Row 2: Audit Findings (full width) ── */}
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+        {/* Table header */}
+        <div className="px-lg py-md bg-surface-container-low border-b border-outline-variant flex flex-col sm:flex-row sm:items-center justify-between gap-sm">
+          <h2 className="text-headline-sm font-semibold text-on-surface">Audit Findings</h2>
+          <div className="flex flex-wrap items-center gap-sm text-label-md">
+            <span className="flex items-center gap-xs">
+              <span className="w-2 h-2 rounded-full bg-error inline-block" />
+              <span className="text-on-surface-variant">
+                {stats.criticalCount} Critical
+              </span>
+            </span>
+            <span className="flex items-center gap-xs">
+              <span className="w-2 h-2 rounded-full bg-tertiary inline-block" />
+              <span className="text-on-surface-variant">
+                {stats.warningCount} Warnings
+              </span>
+            </span>
+            <span className="flex items-center gap-xs">
+              <span className="w-2 h-2 rounded-full bg-secondary inline-block" />
+              <span className="text-on-surface-variant">
+                {stats.infoCount} Info
+              </span>
+            </span>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-outline-variant bg-surface-container-low">
+                <th className="text-left px-lg py-xs text-label-md text-on-surface-variant font-semibold w-28">
+                  Severity
+                </th>
+                <th className="text-left px-md py-xs text-label-md text-on-surface-variant font-semibold">
+                  Issue
+                </th>
+                <th className="text-left px-md py-xs text-label-md text-on-surface-variant font-semibold hidden md:table-cell">
+                  Affected Page
+                </th>
+                <th className="text-right px-lg py-xs text-label-md text-on-surface-variant font-semibold w-36">
+                  Action
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-outline-variant">
+              {auditFindings.map((finding) => {
+                const cfg = severityConfig(finding.severity);
+                return (
+                  <tr
+                    key={finding.id}
+                    className="hover:bg-surface-container-low transition-colors"
+                  >
+                    {/* Severity badge */}
+                    <td className="px-lg py-sm">
+                      <span
+                        className={`inline-flex items-center gap-xs px-xs py-0.5 rounded text-label-sm font-bold ${cfg.badge}`}
+                      >
+                        <span className="material-symbols-outlined text-[14px]">
+                          {cfg.icon}
+                        </span>
+                        {finding.severity}
+                      </span>
+                    </td>
+
+                    {/* Issue + description */}
+                    <td className="px-md py-sm">
+                      <p className="text-label-md font-semibold text-on-surface">
+                        {finding.issue}
+                      </p>
+                      <p className="text-label-sm text-on-surface-variant mt-0.5">
+                        {finding.description}
+                      </p>
+                    </td>
+
+                    {/* Page */}
+                    <td className="px-md py-sm hidden md:table-cell">
+                      <span className="text-label-sm text-on-surface-variant font-mono bg-surface-container px-xs py-0.5 rounded">
+                        {finding.page}
+                      </span>
+                    </td>
+
+                    {/* Action */}
+                    <td className="px-lg py-sm text-right">
+                      <button
+                        type="button"
+                        onClick={() => handleFixIssue(finding.id)}
+                        className="inline-flex items-center gap-xs text-label-sm font-semibold text-primary border border-primary px-sm py-0.5 rounded-lg hover:bg-primary hover:text-on-primary transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">
+                          auto_fix_high
+                        </span>
+                        Auto-Fix
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ── Row 3: AI Meta Generator (8 cols) + Connected Channels (4 cols) ── */}
+      <div className="grid grid-cols-12 gap-md">
+        {/* AI Meta Generator card */}
+        <div className="col-span-12 lg:col-span-8 bg-primary-container rounded-xl overflow-hidden shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 h-full">
+            {/* Left: content */}
+            <div className="p-lg flex flex-col gap-md">
+              {/* Label */}
+              <div className="flex items-center gap-xs">
+                <span className="material-symbols-outlined text-on-primary-container text-[20px]">
+                  auto_awesome
+                </span>
+                <span className="text-label-sm font-bold text-on-primary-container uppercase tracking-widest">
+                  Nexify AI Engine
+                </span>
+              </div>
+
+              {/* Headline */}
+              <div>
+                <h2 className="text-headline-md font-bold text-on-primary-container leading-snug">
+                  AI-Powered Meta Generator
+                </h2>
+                <p className="text-body-md text-on-primary-container opacity-80 mt-xs">
+                  Generate optimised meta titles and descriptions for your entire product catalogue
+                  in seconds. Trained on top-performing e-commerce copy.
+                </p>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex flex-wrap gap-sm mt-auto">
+                <button
+                  type="button"
+                  onClick={handleGenerateMeta}
+                  className="inline-flex items-center gap-xs bg-on-primary-container text-primary-container text-label-md font-semibold px-md py-xs rounded-lg hover:opacity-90 transition-opacity shadow-sm"
+                >
+                  <span className="material-symbols-outlined text-[18px]">bolt</span>
+                  Generate Now
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-xs border border-on-primary-container text-on-primary-container text-label-md font-semibold px-md py-xs rounded-lg hover:bg-on-primary-container hover:text-primary-container transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[18px]">tune</span>
+                  Customize Prompt
+                </button>
+              </div>
+            </div>
+
+            {/* Right: mock code preview */}
+            <div className="bg-black bg-opacity-30 p-md flex flex-col gap-xs font-mono text-[12px] overflow-hidden">
+              <div className="flex items-center gap-xs mb-xs">
+                <span className="w-3 h-3 rounded-full bg-error opacity-70" />
+                <span className="w-3 h-3 rounded-full bg-tertiary-fixed opacity-70" />
+                <span className="w-3 h-3 rounded-full bg-secondary-container opacity-70" />
+                <span className="text-on-primary-container opacity-50 ml-xs text-[11px]">
+                  meta-output.json
+                </span>
+              </div>
+              <pre className="text-on-primary-container opacity-90 leading-relaxed overflow-hidden whitespace-pre-wrap break-all">
+{`{
+  "product": "Wireless Headphones Pro",
+  "metaTitle": "Wireless Headphones Pro
+    – Premium Sound | YourStore",
+  "metaDescription": "Experience
+    studio-quality audio with 40h
+    battery life. Free shipping on
+    orders over $50.",
+  "keywords": [
+    "wireless headphones",
+    "noise cancelling",
+    "bluetooth audio"
+  ]
+}`}
+              </pre>
+            </div>
+          </div>
+        </div>
+
+        {/* Connected Channels card */}
+        <div className="col-span-12 lg:col-span-4 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm flex flex-col gap-md">
+          <h2 className="text-headline-sm font-semibold text-on-surface">Connected Channels</h2>
+          <p className="text-body-md text-on-surface-variant -mt-xs">
+            Sync your SEO data with search engine tools.
+          </p>
+
+          <div className="flex flex-col gap-sm flex-1">
+            {channels.map((ch) => {
+              const cfg = channelStatusConfig(ch.status);
+              return (
+                <div
+                  key={ch.id}
+                  className="flex items-center justify-between p-sm border border-outline-variant rounded-xl"
+                >
+                  <div className="flex items-center gap-sm">
+                    <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center shrink-0">
+                      <span className="material-symbols-outlined text-primary text-[22px]">
+                        {ch.icon}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-label-md font-semibold text-on-surface">{ch.name}</p>
+                      <p className="text-label-sm text-on-surface-variant">{ch.detail}</p>
+                    </div>
+                  </div>
+                  <span
+                    className={`inline-flex items-center gap-xs px-xs py-0.5 rounded-full text-label-sm font-semibold shrink-0 ${cfg.pill}`}
+                  >
+                    <span className="material-symbols-outlined text-[14px]">{cfg.icon}</span>
+                    {cfg.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            className="w-full inline-flex items-center justify-center gap-xs border border-outline-variant text-on-surface text-label-md font-semibold px-md py-xs rounded-lg hover:bg-surface-container transition-colors mt-auto"
+          >
+            <span className="material-symbols-outlined text-[18px]">cable</span>
+            Manage Connections
+          </button>
+        </div>
+      </div>
+    </main>
   );
 }

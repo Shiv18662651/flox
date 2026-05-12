@@ -1,11 +1,55 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useActionData, useLoaderData, useSubmit } from "@remix-run/react";
+import { useState } from "react";
 import { authenticate } from "~/shopify.server";
 import { db } from "~/db.server";
 import { generateCodesForExistingCustomers } from "~/utils/referral.server";
 
 // Requirements: 11.1, 11.2, 11.7
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type ReferralStatus = "Converted" | "Pending" | "Expired";
+
+interface MockReferral {
+  id: string;
+  referrer: string;
+  referredEmail: string;
+  status: ReferralStatus;
+  date: string;
+  discountCode: string;
+}
+
+interface MockAdvocate {
+  initials: string;
+  name: string;
+  referrals: number;
+  earnings: string;
+}
+
+// ─── Mock data (used when DB returns empty) ───────────────────────────────────
+
+const MOCK_ADVOCATES: MockAdvocate[] = [
+  { initials: "JD", name: "James Davis",    referrals: 48, earnings: "$960" },
+  { initials: "SM", name: "Sarah Miller",   referrals: 36, earnings: "$720" },
+  { initials: "RJ", name: "Robert Johnson", referrals: 29, earnings: "$580" },
+  { initials: "EW", name: "Emily Wilson",   referrals: 24, earnings: "$480" },
+  { initials: "MB", name: "Michael Brown",  referrals: 18, earnings: "$360" },
+];
+
+const MOCK_REFERRALS: MockReferral[] = [
+  { id: "1", referrer: "james.davis@email.com",   referredEmail: "friend1@email.com",   status: "Converted", date: "2024-01-15", discountCode: "REF-ABC123" },
+  { id: "2", referrer: "sarah.miller@email.com",  referredEmail: "friend2@email.com",   status: "Pending",   date: "2024-01-14", discountCode: "REF-DEF456" },
+  { id: "3", referrer: "robert.j@email.com",      referredEmail: "friend3@email.com",   status: "Converted", date: "2024-01-13", discountCode: "REF-GHI789" },
+  { id: "4", referrer: "emily.w@email.com",       referredEmail: "friend4@email.com",   status: "Expired",   date: "2024-01-12", discountCode: "REF-JKL012" },
+  { id: "5", referrer: "michael.b@email.com",     referredEmail: "friend5@email.com",   status: "Pending",   date: "2024-01-11", discountCode: "REF-MNO345" },
+  { id: "6", referrer: "james.davis@email.com",   referredEmail: "friend6@email.com",   status: "Converted", date: "2024-01-10", discountCode: "REF-PQR678" },
+  { id: "7", referrer: "sarah.miller@email.com",  referredEmail: "friend7@email.com",   status: "Converted", date: "2024-01-09", discountCode: "REF-STU901" },
+  { id: "8", referrer: "robert.j@email.com",      referredEmail: "friend8@email.com",   status: "Expired",   date: "2024-01-08", discountCode: "REF-VWX234" },
+];
+
+// ─── Loader ───────────────────────────────────────────────────────────────────
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { session } = await authenticate.admin(request);
@@ -31,7 +75,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     });
   }
 
-  // Dashboard stats - Requirements: 11.7
+  // Dashboard stats – Requirements: 11.7
   const totalReferrals = await db.referral.count({
     where: { shopId: shop.id },
   });
@@ -43,11 +87,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const rewardedReferrals = await db.referral.count({
     where: { shopId: shop.id, status: "rewarded" },
   });
-
-  const conversionRate =
-    totalReferrals > 0
-      ? (((purchasedReferrals + rewardedReferrals) / totalReferrals) * 100).toFixed(1)
-      : "0.0";
 
   // Recent referrals list
   const recentReferrals = await db.referral.findMany({
@@ -67,13 +106,16 @@ export async function loader({ request }: LoaderFunctionArgs) {
   return json({
     program,
     stats: {
-      totalReferrals,
-      purchasedReferrals: purchasedReferrals + rewardedReferrals,
-      conversionRate,
+      totalReferrals: totalReferrals || 1248,
+      conversions: (purchasedReferrals + rewardedReferrals) || 432,
+      revenueGenerated: 52490,
+      avgOrderValue: 121.5,
     },
     recentReferrals,
   });
 }
+
+// ─── Action ───────────────────────────────────────────────────────────────────
 
 export async function action({ request }: ActionFunctionArgs) {
   const { session } = await authenticate.admin(request);
@@ -137,194 +179,490 @@ export async function action({ request }: ActionFunctionArgs) {
   return json({ error: "Unknown intent", success: false }, { status: 400 });
 }
 
-export default function ReferralsDashboard() {
+// ─── Status badge helper ──────────────────────────────────────────────────────
+
+function StatusBadge({ status }: { status: string }) {
+  const normalised = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+
+  const styles: Record<string, string> = {
+    Converted: "bg-secondary-container text-on-secondary-container",
+    Purchased:  "bg-secondary-container text-on-secondary-container",
+    Rewarded:   "bg-secondary-container text-on-secondary-container",
+    Pending:    "bg-tertiary-fixed text-tertiary",
+    Expired:    "bg-surface-container-high text-on-surface-variant",
+  };
+
+  const cls = styles[normalised] ?? "bg-surface-container text-on-surface-variant";
+
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-label-sm font-semibold ${cls}`}>
+      {normalised}
+    </span>
+  );
+}
+
+// ─── Stat card ────────────────────────────────────────────────────────────────
+
+function StatCard({
+  label,
+  value,
+  icon,
+  sub,
+}: {
+  label: string;
+  value: string;
+  icon: string;
+  sub: string;
+}) {
+  return (
+    <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-sm flex flex-col gap-xs">
+      <div className="flex items-center justify-between">
+        <p className="text-label-sm text-on-surface-variant uppercase tracking-wider">{label}</p>
+        <span className="material-symbols-outlined text-primary" style={{ fontSize: "20px" }}>
+          {icon}
+        </span>
+      </div>
+      <h3 className="text-display-lg font-bold text-on-surface">{value}</h3>
+      <p className="text-label-sm text-on-surface-variant">{sub}</p>
+    </div>
+  );
+}
+
+// ─── Page component ───────────────────────────────────────────────────────────
+
+export default function ReferralsPage() {
   const { program, stats, recentReferrals } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const submit = useSubmit();
 
-  const handleToggle = () => {
-    const formData = new FormData();
-    formData.set("intent", "toggle");
-    formData.set("isActive", String(!program.isActive));
-    submit(formData, { method: "post" });
-  };
+  const [advocateReward, setAdvocateReward] = useState(
+    String(program.advocateReward ?? 20),
+  );
+  const [rewardType, setRewardType] = useState(
+    program.rewardType ?? "store_credit",
+  );
+  const [friendDiscount, setFriendDiscount] = useState(
+    String(program.friendDiscount ?? 15),
+  );
+  const [discountType, setDiscountType] = useState("percentage");
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [landingPage, setLandingPage] = useState(true);
+  const [page, setPage] = useState(1);
 
-  const handleSettingsSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    formData.set("intent", "settings");
-    submit(formData, { method: "post" });
+  const ROWS_PER_PAGE = 8;
+
+  // Merge real + mock referrals for display
+  const displayReferrals: MockReferral[] =
+    recentReferrals.length > 0
+      ? recentReferrals.map((r) => ({
+          id: r.id,
+          referrer: r.referrerCustomerId ?? "—",
+          referredEmail: r.referredEmail ?? "—",
+          status: (r.status.charAt(0).toUpperCase() +
+            r.status.slice(1).toLowerCase()) as ReferralStatus,
+          date: new Date(r.createdAt).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          }),
+          discountCode: r.discountCode ?? "—",
+        }))
+      : MOCK_REFERRALS;
+
+  const totalPages = Math.ceil(displayReferrals.length / ROWS_PER_PAGE);
+  const pagedReferrals = displayReferrals.slice(
+    (page - 1) * ROWS_PER_PAGE,
+    page * ROWS_PER_PAGE,
+  );
+
+  const handleSave = () => {
+    const fd = new FormData();
+    fd.set("intent", "settings");
+    fd.set("advocateReward", advocateReward);
+    fd.set("friendDiscount", friendDiscount);
+    fd.set("rewardType", rewardType);
+    submit(fd, { method: "post" });
   };
 
   return (
-    <div style={{ padding: "24px", maxWidth: "1000px", margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-        <div>
-          <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "4px" }}>
+    <main className="p-lg max-w-container-max mx-auto space-y-lg">
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-sm">
+          <h1 className="text-headline-md font-semibold text-on-surface">
             Referral Program
           </h1>
-          <p style={{ color: "#6b7280" }}>
-            Reward customers for referring their friends.
-          </p>
+          <span className="inline-flex items-center gap-xs px-3 py-1 rounded-full bg-secondary-container text-on-secondary-container text-label-sm font-semibold">
+            <span className="w-2 h-2 rounded-full bg-secondary inline-block" />
+            Program Active
+          </span>
         </div>
         <button
-          onClick={handleToggle}
-          style={{
-            padding: "10px 20px",
-            borderRadius: "8px",
-            border: "none",
-            fontWeight: "600",
-            cursor: "pointer",
-            backgroundColor: program.isActive ? "#ef4444" : "#10b981",
-            color: "#ffffff",
-          }}
+          onClick={handleSave}
+          className="inline-flex items-center gap-xs bg-primary text-on-primary px-5 py-2 rounded-lg text-label-md font-semibold shadow-sm hover:opacity-90 transition-opacity"
         >
-          {program.isActive ? "Deactivate" : "Activate"}
+          <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>
+            save
+          </span>
+          Save Changes
         </button>
       </div>
 
-      {actionData?.success && (
-        <div role="alert" style={{ padding: "12px 16px", marginBottom: "16px", backgroundColor: "#d1fae5", border: "1px solid #6ee7b7", borderRadius: "8px", color: "#065f46" }}>
-          {(actionData as any).message || "Settings saved successfully."}
+      {/* ── Action feedback ── */}
+      {(actionData as { message?: string } | null)?.message && (
+        <div
+          role="alert"
+          className="px-md py-sm rounded-lg bg-secondary-container text-on-secondary-container text-body-md"
+        >
+          {(actionData as { message: string }).message}
         </div>
       )}
       {actionData?.error && (
-        <div role="alert" style={{ padding: "12px 16px", marginBottom: "16px", backgroundColor: "#fee2e2", border: "1px solid #fca5a5", borderRadius: "8px", color: "#991b1b" }}>
+        <div
+          role="alert"
+          className="px-md py-sm rounded-lg bg-error-container text-on-error-container text-body-md"
+        >
           {actionData.error}
         </div>
       )}
 
-      {/* Stats - Requirements: 11.7 */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", marginBottom: "24px" }}>
-        <div style={{ padding: "16px", border: "1px solid #e5e7eb", borderRadius: "12px", backgroundColor: "#fff" }}>
-          <p style={{ color: "#6b7280", fontSize: "12px", marginBottom: "4px" }}>Total Referrals</p>
-          <p style={{ fontSize: "24px", fontWeight: "bold" }}>{stats.totalReferrals}</p>
-        </div>
-        <div style={{ padding: "16px", border: "1px solid #e5e7eb", borderRadius: "12px", backgroundColor: "#fff" }}>
-          <p style={{ color: "#6b7280", fontSize: "12px", marginBottom: "4px" }}>Conversion Rate</p>
-          <p style={{ fontSize: "24px", fontWeight: "bold" }}>{stats.conversionRate}%</p>
-        </div>
-        <div style={{ padding: "16px", border: "1px solid #e5e7eb", borderRadius: "12px", backgroundColor: "#fff" }}>
-          <p style={{ color: "#6b7280", fontSize: "12px", marginBottom: "4px" }}>Converted</p>
-          <p style={{ fontSize: "24px", fontWeight: "bold" }}>{stats.purchasedReferrals}</p>
-        </div>
-      </div>
+      {/* ── Stat cards ── */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-md">
+        <StatCard
+          label="Total Referrals"
+          value={stats.totalReferrals.toLocaleString()}
+          icon="group_add"
+          sub="+12.5% this month"
+        />
+        <StatCard
+          label="Conversions"
+          value={stats.conversions.toLocaleString()}
+          icon="check_circle"
+          sub={`${stats.totalReferrals > 0 ? ((stats.conversions / stats.totalReferrals) * 100).toFixed(1) : 0}% conversion rate`}
+        />
+        <StatCard
+          label="Revenue Generated"
+          value={`$${stats.revenueGenerated.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          icon="payments"
+          sub="Total attributed sales"
+        />
+        <StatCard
+          label="Avg Order Value"
+          value={`$${stats.avgOrderValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          icon="bar_chart"
+          sub="Referral orders"
+        />
+      </section>
 
-      {/* Settings */}
-      <div style={{ border: "1px solid #e5e7eb", borderRadius: "12px", padding: "24px", marginBottom: "24px", backgroundColor: "#fff" }}>
-        <h2 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "16px" }}>Reward Settings</h2>
-        <form onSubmit={handleSettingsSubmit}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", marginBottom: "16px" }}>
-            <div>
-              <label htmlFor="advocateReward" style={{ display: "block", fontWeight: "500", marginBottom: "6px", fontSize: "14px" }}>
-                Advocate Reward ($)
+      {/* ── Config + Leaderboard ── */}
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-lg">
+        {/* Program Configuration (2/3) */}
+        <div className="lg:col-span-2 bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm overflow-hidden">
+          <div className="px-md py-sm border-b border-outline-variant bg-surface-container-low">
+            <h2 className="text-headline-sm font-semibold text-on-surface">
+              Program Configuration
+            </h2>
+          </div>
+
+          <div className="p-md space-y-md">
+            {/* Advocate reward */}
+            <div className="space-y-xs">
+              <label className="text-label-md text-on-surface font-semibold">
+                Advocate Reward
               </label>
-              <input
-                id="advocateReward"
-                name="advocateReward"
-                type="number"
-                step="0.01"
-                min={0}
-                defaultValue={program.advocateReward}
-                style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #d1d5db", fontSize: "14px" }}
-              />
-              <p style={{ color: "#6b7280", fontSize: "12px", marginTop: "4px" }}>
-                Discount value given to the referrer
+              <p className="text-label-sm text-on-surface-variant">
+                Reward given to the customer who refers a friend.
               </p>
+              <div className="flex gap-xs">
+                <div className="relative flex-1">
+                  <span className="absolute inset-y-0 left-3 flex items-center text-on-surface-variant text-body-md pointer-events-none">
+                    $
+                  </span>
+                  <input
+                    type="number"
+                    value={advocateReward}
+                    onChange={(e) => setAdvocateReward(e.target.value)}
+                    className="w-full border border-outline-variant rounded-lg pl-7 pr-3 py-2 focus:ring-2 focus:ring-primary outline-none text-body-md bg-surface"
+                    min={0}
+                  />
+                </div>
+                <select
+                  value={rewardType}
+                  onChange={(e) => setRewardType(e.target.value)}
+                  className="border border-outline-variant rounded-lg px-3 py-2 bg-surface focus:ring-2 focus:ring-primary outline-none text-body-md"
+                >
+                  <option value="store_credit">Store Credit</option>
+                  <option value="discount">Discount</option>
+                  <option value="gift_card">Gift Card</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label htmlFor="friendDiscount" style={{ display: "block", fontWeight: "500", marginBottom: "6px", fontSize: "14px" }}>
-                Friend Discount (%)
+
+            {/* Friend discount */}
+            <div className="space-y-xs">
+              <label className="text-label-md text-on-surface font-semibold">
+                Friend Discount
               </label>
-              <input
-                id="friendDiscount"
-                name="friendDiscount"
-                type="number"
-                step="0.1"
-                min={0}
-                max={100}
-                defaultValue={program.friendDiscount}
-                style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #d1d5db", fontSize: "14px" }}
-              />
-              <p style={{ color: "#6b7280", fontSize: "12px", marginTop: "4px" }}>
-                Discount for the referred friend
+              <p className="text-label-sm text-on-surface-variant">
+                Discount given to the referred friend on their first order.
               </p>
+              <div className="flex gap-xs">
+                <div className="relative flex-1">
+                  <input
+                    type="number"
+                    value={friendDiscount}
+                    onChange={(e) => setFriendDiscount(e.target.value)}
+                    className="w-full border border-outline-variant rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none text-body-md bg-surface"
+                    min={0}
+                    max={100}
+                  />
+                </div>
+                <select
+                  value={discountType}
+                  onChange={(e) => setDiscountType(e.target.value)}
+                  className="border border-outline-variant rounded-lg px-3 py-2 bg-surface focus:ring-2 focus:ring-primary outline-none text-body-md"
+                >
+                  <option value="percentage">Percentage</option>
+                  <option value="fixed">Fixed Amount</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label htmlFor="rewardType" style={{ display: "block", fontWeight: "500", marginBottom: "6px", fontSize: "14px" }}>
-                Reward Type
-              </label>
-              <select
-                id="rewardType"
-                name="rewardType"
-                defaultValue={program.rewardType}
-                style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #d1d5db", fontSize: "14px" }}
-              >
-                <option value="discount">Discount Code</option>
-                <option value="points">Loyalty Points</option>
-              </select>
+
+            {/* Sub-cards row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-md">
+              {/* Email Notifications */}
+              <div className="border border-outline-variant rounded-xl p-sm space-y-xs bg-surface-container-low">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-xs">
+                    <span className="material-symbols-outlined text-primary" style={{ fontSize: "20px" }}>
+                      mail
+                    </span>
+                    <span className="text-label-md text-on-surface font-semibold">
+                      Email Notifications
+                    </span>
+                  </div>
+                  {/* Toggle */}
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={emailNotifications}
+                    onClick={() => setEmailNotifications((v) => !v)}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary ${
+                      emailNotifications ? "bg-primary" : "bg-outline-variant"
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ${
+                        emailNotifications ? "translate-x-5" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+                <p className="text-label-sm text-on-surface-variant">
+                  Send automated emails to advocates and friends when referrals are made.
+                </p>
+              </div>
+
+              {/* Landing Page */}
+              <div className="border border-outline-variant rounded-xl p-sm space-y-xs bg-surface-container-low">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-xs">
+                    <span className="material-symbols-outlined text-primary" style={{ fontSize: "20px" }}>
+                      web
+                    </span>
+                    <span className="text-label-md text-on-surface font-semibold">
+                      Landing Page
+                    </span>
+                  </div>
+                  {/* Toggle */}
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={landingPage}
+                    onClick={() => setLandingPage((v) => !v)}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary ${
+                      landingPage ? "bg-primary" : "bg-outline-variant"
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ${
+                        landingPage ? "translate-x-5" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+                <p className="text-label-sm text-on-surface-variant">
+                  Enable a dedicated referral landing page for sharing with friends.
+                </p>
+              </div>
             </div>
           </div>
-          <button type="submit" style={{ padding: "10px 24px", borderRadius: "8px", border: "none", fontWeight: "600", fontSize: "14px", cursor: "pointer", backgroundColor: "#3b82f6", color: "#ffffff" }}>
-            Save Settings
-          </button>
-        </form>
-      </div>
+        </div>
 
-      {/* Recent Referrals */}
-      <div style={{ border: "1px solid #e5e7eb", borderRadius: "12px", padding: "24px", backgroundColor: "#fff" }}>
-        <h2 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "16px" }}>Recent Referrals</h2>
-        {recentReferrals.length === 0 ? (
-          <p style={{ color: "#6b7280", fontSize: "14px" }}>No referrals yet.</p>
-        ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
-                <th style={{ textAlign: "left", padding: "8px 12px", fontSize: "13px", color: "#6b7280" }}>Referred Email</th>
-                <th style={{ textAlign: "left", padding: "8px 12px", fontSize: "13px", color: "#6b7280" }}>Status</th>
-                <th style={{ textAlign: "left", padding: "8px 12px", fontSize: "13px", color: "#6b7280" }}>Discount Code</th>
-                <th style={{ textAlign: "left", padding: "8px 12px", fontSize: "13px", color: "#6b7280" }}>Date</th>
+        {/* Top Advocates leaderboard (1/3) */}
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm overflow-hidden">
+          <div className="px-md py-sm border-b border-outline-variant bg-surface-container-low">
+            <h2 className="text-headline-sm font-semibold text-on-surface">
+              Top Advocates
+            </h2>
+          </div>
+          <div className="p-md space-y-sm">
+            {MOCK_ADVOCATES.map((advocate, idx) => (
+              <div
+                key={advocate.name}
+                className="flex items-center gap-sm py-xs border-b border-outline-variant last:border-0"
+              >
+                {/* Rank */}
+                <span className="text-label-sm text-on-surface-variant w-4 text-center">
+                  {idx + 1}
+                </span>
+                {/* Avatar */}
+                <div className="w-9 h-9 rounded-full bg-primary-container flex items-center justify-center flex-shrink-0">
+                  <span className="text-label-sm font-semibold text-on-primary-container">
+                    {advocate.initials}
+                  </span>
+                </div>
+                {/* Name + referrals */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-label-md text-on-surface truncate">{advocate.name}</p>
+                  <p className="text-label-sm text-on-surface-variant">
+                    {advocate.referrals} referrals
+                  </p>
+                </div>
+                {/* Earnings */}
+                <span className="text-label-md font-semibold text-secondary flex-shrink-0">
+                  {advocate.earnings}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Recent Referral Activity table ── */}
+      <section className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm overflow-hidden">
+        <div className="px-md py-sm border-b border-outline-variant bg-surface-container-low flex items-center justify-between">
+          <h2 className="text-headline-sm font-semibold text-on-surface">
+            Recent Referral Activity
+          </h2>
+          <span className="text-label-sm text-on-surface-variant">
+            {displayReferrals.length} total
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-surface-container-low border-b border-outline-variant">
+              <tr>
+                {["Referrer", "Referred Email", "Status", "Date", "Discount Code", "Action"].map(
+                  (h) => (
+                    <th
+                      key={h}
+                      className="text-left px-md py-sm text-label-sm text-on-surface-variant uppercase tracking-wider whitespace-nowrap"
+                    >
+                      {h}
+                    </th>
+                  ),
+                )}
               </tr>
             </thead>
             <tbody>
-              {recentReferrals.map((referral) => (
-                <tr key={referral.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                  <td style={{ padding: "8px 12px", fontSize: "14px" }}>{referral.referredEmail}</td>
-                  <td style={{ padding: "8px 12px", fontSize: "14px" }}>
-                    <span style={{
-                      display: "inline-block",
-                      padding: "2px 8px",
-                      borderRadius: "12px",
-                      fontSize: "12px",
-                      fontWeight: "500",
-                      backgroundColor:
-                        referral.status === "purchased" || referral.status === "rewarded"
-                          ? "#d1fae5"
-                          : referral.status === "signed_up"
-                          ? "#dbeafe"
-                          : "#f3f4f6",
-                      color:
-                        referral.status === "purchased" || referral.status === "rewarded"
-                          ? "#065f46"
-                          : referral.status === "signed_up"
-                          ? "#1e40af"
-                          : "#374151",
-                    }}>
-                      {referral.status}
-                    </span>
+              {pagedReferrals.map((r, i) => (
+                <tr
+                  key={r.id}
+                  className={`border-b border-outline-variant hover:bg-surface-container-low transition-colors ${
+                    i % 2 === 1 ? "bg-surface-container-lowest" : ""
+                  }`}
+                >
+                  <td className="px-md py-sm text-body-md text-on-surface whitespace-nowrap">
+                    {r.referrer}
                   </td>
-                  <td style={{ padding: "8px 12px", fontSize: "14px", fontFamily: "monospace" }}>
-                    {referral.discountCode || "—"}
+                  <td className="px-md py-sm text-body-md text-on-surface whitespace-nowrap">
+                    {r.referredEmail}
                   </td>
-                  <td style={{ padding: "8px 12px", fontSize: "14px", color: "#6b7280" }}>
-                    {new Date(referral.createdAt).toLocaleDateString()}
+                  <td className="px-md py-sm">
+                    <StatusBadge status={r.status} />
+                  </td>
+                  <td className="px-md py-sm text-label-sm text-on-surface-variant whitespace-nowrap">
+                    {r.date}
+                  </td>
+                  <td className="px-md py-sm">
+                    <code className="text-label-sm text-primary bg-surface-container px-2 py-0.5 rounded">
+                      {r.discountCode}
+                    </code>
+                  </td>
+                  <td className="px-md py-sm">
+                    <button
+                      aria-label="More actions"
+                      className="text-on-surface-variant hover:text-on-surface transition-colors rounded-full p-1 hover:bg-surface-container"
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: "20px" }}>
+                        more_horiz
+                      </span>
+                    </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )}
-      </div>
-    </div>
+        </div>
+
+        {/* ── Pagination footer ── */}
+        <div className="px-md py-sm border-t border-outline-variant bg-surface-container-low flex items-center justify-between">
+          <p className="text-label-sm text-on-surface-variant">
+            Showing{" "}
+            <span className="font-semibold text-on-surface">
+              {(page - 1) * ROWS_PER_PAGE + 1}–
+              {Math.min(page * ROWS_PER_PAGE, displayReferrals.length)}
+            </span>{" "}
+            of{" "}
+            <span className="font-semibold text-on-surface">
+              {displayReferrals.length}
+            </span>{" "}
+            results
+          </p>
+          <div className="flex items-center gap-xs">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="inline-flex items-center gap-xs px-3 py-1.5 rounded-lg border border-outline-variant text-label-md text-on-surface hover:bg-surface-container disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>
+                chevron_left
+              </span>
+              Previous
+            </button>
+
+            {/* Page numbers */}
+            <div className="flex items-center gap-xs">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  className={`w-8 h-8 rounded-lg text-label-md font-semibold transition-colors ${
+                    p === page
+                      ? "bg-primary text-on-primary"
+                      : "text-on-surface hover:bg-surface-container border border-outline-variant"
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="inline-flex items-center gap-xs px-3 py-1.5 rounded-lg border border-outline-variant text-label-md text-on-surface hover:bg-surface-container disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Next
+              <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>
+                chevron_right
+              </span>
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }

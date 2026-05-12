@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap');
+
+body {
+  background-color: #f7faf6;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.metric-card-outline {
+  border: 1px solid #bec9c3;
+}
+
+.zebra-stripe:nth-child(even) {
+  background-color: #f1f4f1;
+}
