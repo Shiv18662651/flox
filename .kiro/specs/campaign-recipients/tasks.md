@@ -17,8 +17,8 @@ This plan implements the campaign recipient selection feature by building from t
     - **Property 6: Email parsing, validation, and deduplication**
     - **Validates: Requirements 5.2, 5.3, 5.4, 5.5**
 
-- [ ] 2. Create recipient resolver utility
-  - [-] 2.1 Create `app/utils/recipient-resolver.server.ts` with resolver functions
+- [x] 2. Create recipient resolver utility
+  - [x] 2.1 Create `app/utils/recipient-resolver.server.ts` with resolver functions
     - Implement `resolveAllSubscribers(shopId)` — queries customers with `isSubscribed=true`
     - Implement `resolveSegment(shopId, filters)` — queries customers matching all active filters AND `isSubscribed=true`
     - Implement `resolveManualEmails(input)` — delegates to email parser, returns valid unique emails
@@ -32,8 +32,8 @@ This plan implements the campaign recipient selection feature by building from t
     - **Property 5: Segment filter AND composition with subscription check**
     - **Validates: Requirements 4.2, 4.3, 4.4, 4.5, 4.6**
 
-- [ ] 3. Create quota check utility
-  - [-] 3.1 Create `app/utils/campaign-quota.server.ts` with `checkCampaignQuota` function
+- [x] 3. Create quota check utility
+  - [x] 3.1 Create `app/utils/campaign-quota.server.ts` with `checkCampaignQuota` function
     - Accept `shopId`, `plan`, and `recipientCount`
     - Use existing `isWithinEmailQuota` from `plan-limits.server.ts`
     - Return `{ allowed: boolean, remaining: number, exceeded: boolean }`
@@ -42,11 +42,11 @@ This plan implements the campaign recipient selection feature by building from t
     - **Property 7: Quota exceeded detection**
     - **Validates: Requirements 6.3, 7.2**
 
-- [~] 4. Checkpoint - Ensure all utility tests pass
+- [x] 4. Checkpoint - Ensure all utility tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 5. Implement campaign send action
-  - [~] 5.1 Add `create_and_send` intent to the action handler in `app/routes/app.email.campaigns.tsx`
+- [x] 5. Implement campaign send action
+  - [x] 5.1 Add `create_and_send` intent to the action handler in `app/routes/app.email.campaigns.tsx`
     - Parse form data: name, subject, templateJson, recipientMode, segmentFilters, manualEmails
     - Create Campaign record with status "draft"
     - Call `resolveRecipients` to get final recipient list
@@ -59,12 +59,12 @@ This plan implements the campaign recipient selection feature by building from t
     - Enqueue EMAIL jobs in BullMQ queue per recipient
     - Update campaign status to "sent", set sentAt
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.9_
-  - [~] 5.2 Add `save_draft` intent to the action handler
+  - [x] 5.2 Add `save_draft` intent to the action handler
     - Parse form data: name, subject, templateJson, recipientMode, segmentFilters, manualEmails
     - Create or update Campaign record with status "draft"
     - Store recipient config in templateJson wrapper structure
     - _Requirements: 2.8_
-  - [~] 5.3 Add `preview_count` intent to the action handler
+  - [x] 5.3 Add `preview_count` intent to the action handler
     - Parse recipientMode, segmentFilters, manualEmails from form data
     - Call `resolveRecipients` to get count (without full email list for performance)
     - Return count and quota info
@@ -76,27 +76,27 @@ This plan implements the campaign recipient selection feature by building from t
     - **Property 9: Personalized HTML contains required elements**
     - **Validates: Requirements 7.5**
 
-- [~] 6. Checkpoint - Ensure send action tests pass
+- [x] 6. Checkpoint - Ensure send action tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 7. Implement Campaign Wizard UI
-  - [~] 7.1 Add "New Campaign" button and wizard modal shell to `app/routes/app.email.campaigns.tsx`
+- [x] 7. Implement Campaign Wizard UI
+  - [x] 7.1 Add "New Campaign" button and wizard modal shell to `app/routes/app.email.campaigns.tsx`
     - Add "New Campaign" button in page header (visible always, including empty state)
     - Create modal component with step indicator (Subject, Content, Recipients, Review)
     - Manage wizard state in React useState
     - Wire modal open/close to button click
     - _Requirements: 1.1, 1.2, 1.3, 2.1_
-  - [~] 7.2 Implement Subject step
+  - [x] 7.2 Implement Subject step
     - Campaign name text input with validation (non-empty after trim)
     - Email subject line text input with validation (non-empty after trim)
     - "Next" button disabled until both fields are valid
     - _Requirements: 2.2_
-  - [~] 7.3 Implement Content step
+  - [x] 7.3 Implement Content step
     - Integrate with existing email template block editor (reuse from templates page)
     - "Next" button disabled until at least one block exists
     - "Back" button preserves subject step data
     - _Requirements: 2.3, 2.7_
-  - [~] 7.4 Implement Recipients step with mode selector
+  - [x] 7.4 Implement Recipients step with mode selector
     - Radio group for three modes: All Subscribers, Customer Segments, Manual Entry
     - All Subscribers: display subscriber count via fetcher calling `preview_count`
     - Customer Segments: filter controls for loyaltyTier (select), minTotalOrders (number input), minTotalSpent (number input); count updates via fetcher on filter change
@@ -106,7 +106,7 @@ This plan implements the campaign recipient selection feature by building from t
     - Warning banner if count exceeds quota
     - "Next" button disabled if zero valid recipients
     - _Requirements: 3.1, 3.2, 3.4, 4.1, 4.6, 4.7, 5.1, 5.6, 6.1, 6.2, 6.3, 6.4_
-  - [~] 7.5 Implement Review step
+  - [x] 7.5 Implement Review step
     - Display campaign name, subject, content preview (rendered HTML in iframe or sanitized div)
     - Display recipient mode label and count
     - "Send Campaign" button triggers form submission with `create_and_send` intent
@@ -123,7 +123,7 @@ This plan implements the campaign recipient selection feature by building from t
     - Test review step shows all required fields
     - _Requirements: 1.1, 1.3, 2.1, 2.5, 2.7_
 
-- [~] 8. Final checkpoint - Ensure all tests pass
+- [x] 8. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
