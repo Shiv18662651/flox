@@ -624,6 +624,7 @@ export default function SeoPage() {
                 </button>
                 <button
                   type="button"
+                  onClick={() => alert("Customize prompt feature coming soon!")}
                   className="inline-flex items-center gap-xs border border-on-primary-container text-on-primary-container text-label-md font-semibold px-md py-xs rounded-lg hover:bg-on-primary-container hover:text-primary-container transition-colors"
                 >
                   <Icon name="tune" size={18} />
@@ -699,6 +700,7 @@ export default function SeoPage() {
 
           <button
             type="button"
+            onClick={() => alert("Manage connections feature coming soon!")}
             className="w-full inline-flex items-center justify-center gap-xs border border-outline-variant text-on-surface text-label-md font-semibold px-md py-xs rounded-lg hover:bg-surface-container transition-colors mt-auto"
           >
             <Icon name="cable" size={18} />

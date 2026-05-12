@@ -404,7 +404,13 @@ export default function LoyaltyDashboard() {
                   <Icon name="receipt_long" size={20} className="text-primary" />
                   <h2 className="text-headline-sm font-semibold text-on-surface">Recent Transactions</h2>
                 </div>
-                <button className="text-label-md text-primary hover:underline">View all</button>
+                <button
+                  type="button"
+                  onClick={() => alert("Full transaction history coming soon!")}
+                  className="text-label-md text-primary hover:underline"
+                >
+                  View all
+                </button>
               </div>
 
               <div className="overflow-x-auto">
@@ -517,7 +523,11 @@ export default function LoyaltyDashboard() {
                 ))}
 
                 <div className="pt-xs">
-                  <button className="w-full flex items-center justify-center gap-xs bg-on-primary-container/20 hover:bg-on-primary-container/30 text-on-primary-container text-label-md font-semibold py-2 rounded-xl transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => alert("Full report coming soon!")}
+                    className="w-full flex items-center justify-center gap-xs bg-on-primary-container/20 hover:bg-on-primary-container/30 text-on-primary-container text-label-md font-semibold py-2 rounded-xl transition-colors"
+                  >
                     <Icon name="open_in_new" size={18} />
                     View Full Report
                   </button>
@@ -530,7 +540,9 @@ export default function LoyaltyDashboard() {
 
       {/* ── FAB ─────────────────────────────────────────────────────────────── */}
       <button
+        type="button"
         aria-label="Add new reward"
+        onClick={() => alert("Add reward feature coming soon!")}
         className="fixed bottom-8 right-8 w-14 h-14 bg-primary text-on-primary rounded-full shadow-lg flex items-center justify-center hover:opacity-90 transition-opacity focus:outline-none focus:ring-4 focus:ring-primary/40 z-20"
       >
         <Icon name="add" size={28} />

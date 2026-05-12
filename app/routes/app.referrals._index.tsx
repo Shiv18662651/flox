@@ -586,7 +586,9 @@ export default function ReferralsPage() {
                   </td>
                   <td className="px-md py-sm">
                     <button
+                      type="button"
                       aria-label="More actions"
+                      onClick={() => alert("More actions coming soon!")}
                       className="text-on-surface-variant hover:text-on-surface transition-colors rounded-full p-1 hover:bg-surface-container"
                     >
                       <Icon name="more_horiz" size={20} />

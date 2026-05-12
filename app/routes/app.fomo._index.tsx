@@ -507,6 +507,7 @@ export default function FomoSettingsPage() {
                             type="button"
                             aria-label="Dismiss popup"
                             className="text-on-surface-variant hover:text-on-surface flex-shrink-0"
+                            onClick={() => {}}
                           >
                             <Icon name="close" size={14} />
                           </button>

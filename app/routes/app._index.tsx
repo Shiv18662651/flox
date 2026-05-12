@@ -288,10 +288,13 @@ export default function AppDashboard() {
               </ul>
 
               <div className="px-md py-sm border-t border-outline-variant">
-                <button className="flex items-center gap-xs text-primary text-label-md font-semibold hover:underline transition-colors">
+                <Link
+                  to="/app/analytics"
+                  className="flex items-center gap-xs text-primary text-label-md font-semibold hover:underline transition-colors"
+                >
                   View Full History
                   <Icon name="arrow_forward" size={16} />
-                </button>
+                </Link>
               </div>
             </section>
           </div>

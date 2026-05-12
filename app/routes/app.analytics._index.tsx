@@ -637,6 +637,7 @@ export default function AnalyticsDashboard() {
           {/* Export */}
           <button
             type="button"
+            onClick={() => alert("Export feature coming soon!")}
             className="flex items-center gap-xs bg-primary text-on-primary text-label-md font-semibold px-md py-xs rounded-lg hover:opacity-90 transition-opacity shadow-sm"
           >
             <Icon name="download" size={18} />
