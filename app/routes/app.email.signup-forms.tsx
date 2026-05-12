@@ -4,6 +4,7 @@ import { useActionData, useLoaderData, useSubmit, Link, useLocation } from "@rem
 import { useState } from "react";
 import { authenticate } from "~/shopify.server";
 import { db } from "~/db.server";
+import { Icon } from "~/components/Icon";
 
 const FORM_TYPES = [
   { value: "popup", label: "Popup" },
@@ -123,22 +124,18 @@ const EMAIL_NAV = [
 function EmailNav() {
   const location = useLocation();
   return (
-    <div style={{ display: "flex", gap: "4px", marginBottom: "24px", borderBottom: "1px solid #e5e7eb", paddingBottom: "12px" }}>
+    <div className="flex gap-xs mb-lg border-b border-outline-variant pb-sm">
       {EMAIL_NAV.map((item) => {
         const isActive = location.pathname === item.path;
         return (
           <Link
             key={item.path}
             to={item.path}
-            style={{
-              padding: "8px 16px",
-              fontSize: "14px",
-              fontWeight: isActive ? "600" : "400",
-              color: isActive ? "#3b82f6" : "#6b7280",
-              borderBottom: isActive ? "2px solid #3b82f6" : "2px solid transparent",
-              textDecoration: "none",
-              marginBottom: "-14px",
-            }}
+            className={`px-md py-xs text-label-md font-medium border-b-2 -mb-[2px] transition-colors ${
+              isActive
+                ? "text-primary border-primary"
+                : "text-on-surface-variant border-transparent hover:text-on-surface"
+            }`}
           >
             {item.label}
           </Link>
@@ -205,164 +202,166 @@ export default function SignupFormsPage() {
   };
 
   return (
-    <div style={{ padding: "24px", maxWidth: "1200px", margin: "0 auto" }}>
+    <main className="p-lg max-w-container-max mx-auto font-sans pb-24">
       <EmailNav />
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-        <h1 style={{ fontSize: "24px", fontWeight: "bold" }}>Signup Forms</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-md mb-lg">
+        <h1 className="text-display-lg font-bold text-on-surface">Signup Forms</h1>
         <button
           type="button"
           onClick={() => setShowForm(!showForm)}
-          style={{ padding: "10px 20px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}
+          className="inline-flex items-center gap-xs bg-primary text-on-primary text-label-md font-semibold px-md py-xs rounded-lg hover:opacity-90 transition-opacity shadow-sm"
         >
+          <Icon name="add" size={18} />
           {showForm ? "Cancel" : "New Form"}
         </button>
       </div>
 
       {(actionData as { error?: string })?.error && (
-        <div role="alert" style={{ padding: "12px", marginBottom: "16px", backgroundColor: "#fee2e2", borderRadius: "8px", color: "#991b1b" }}>
+        <div role="alert" className="mb-md px-sm py-xs rounded-lg bg-error-container text-on-error-container flex items-center gap-xs text-label-md">
+          <Icon name="error" size={16} />
           {(actionData as { error: string }).error}
         </div>
       )}
       {(actionData as { message?: string })?.message && (
-        <div role="status" style={{ padding: "12px", marginBottom: "16px", backgroundColor: "#d1fae5", borderRadius: "8px", color: "#065f46" }}>
+        <div role="status" className="mb-md px-sm py-xs rounded-lg bg-secondary-container text-on-secondary-container flex items-center gap-xs text-label-md">
+          <Icon name="check_circle" size={16} />
           {(actionData as { message: string }).message}
         </div>
       )}
 
       {showForm && (
-        <div style={{ border: "1px solid #e5e7eb", borderRadius: "8px", padding: "16px", marginBottom: "24px", backgroundColor: "#fff" }}>
-          <h2 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "16px" }}>Create Signup Form</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md mb-lg shadow-sm">
+          <h2 className="text-headline-sm font-semibold text-on-surface mb-md">Create Signup Form</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-md mb-md">
             <div>
-              <label style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "4px" }}>Form Name</label>
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} style={{ width: "100%", padding: "8px", border: "1px solid #d1d5db", borderRadius: "6px" }} placeholder="Newsletter Popup" />
+              <label className="block text-label-md font-medium text-on-surface mb-xs">Form Name</label>
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-sm py-xs rounded-lg border border-outline-variant bg-surface text-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition" placeholder="Newsletter Popup" />
             </div>
             <div>
-              <label style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "4px" }}>Form Type</label>
-              <select value={formType} onChange={(e) => setFormType(e.target.value)} style={{ width: "100%", padding: "8px", border: "1px solid #d1d5db", borderRadius: "6px" }}>
+              <label className="block text-label-md font-medium text-on-surface mb-xs">Form Type</label>
+              <select value={formType} onChange={(e) => setFormType(e.target.value)} className="w-full px-sm py-xs rounded-lg border border-outline-variant bg-surface text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition appearance-none">
                 {FORM_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
             </div>
             <div>
-              <label style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "4px" }}>Trigger</label>
-              <select value={trigger} onChange={(e) => setTrigger(e.target.value)} style={{ width: "100%", padding: "8px", border: "1px solid #d1d5db", borderRadius: "6px" }}>
+              <label className="block text-label-md font-medium text-on-surface mb-xs">Trigger</label>
+              <select value={trigger} onChange={(e) => setTrigger(e.target.value)} className="w-full px-sm py-xs rounded-lg border border-outline-variant bg-surface text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition appearance-none">
                 {TRIGGERS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
             </div>
             <div>
-              <label style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "4px" }}>
+              <label className="block text-label-md font-medium text-on-surface mb-xs">
                 Trigger Value {trigger === "delay" ? "(seconds)" : trigger === "scroll" ? "(%)" : ""}
               </label>
-              <input type="text" value={triggerValue} onChange={(e) => setTriggerValue(e.target.value)} style={{ width: "100%", padding: "8px", border: "1px solid #d1d5db", borderRadius: "6px" }} />
+              <input type="text" value={triggerValue} onChange={(e) => setTriggerValue(e.target.value)} className="w-full px-sm py-xs rounded-lg border border-outline-variant bg-surface text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition" />
             </div>
             <div>
-              <label style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "4px" }}>Headline</label>
-              <input type="text" value={headline} onChange={(e) => setHeadline(e.target.value)} style={{ width: "100%", padding: "8px", border: "1px solid #d1d5db", borderRadius: "6px" }} />
+              <label className="block text-label-md font-medium text-on-surface mb-xs">Headline</label>
+              <input type="text" value={headline} onChange={(e) => setHeadline(e.target.value)} className="w-full px-sm py-xs rounded-lg border border-outline-variant bg-surface text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition" />
             </div>
             <div>
-              <label style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "4px" }}>Subheadline</label>
-              <input type="text" value={subheadline} onChange={(e) => setSubheadline(e.target.value)} style={{ width: "100%", padding: "8px", border: "1px solid #d1d5db", borderRadius: "6px" }} />
+              <label className="block text-label-md font-medium text-on-surface mb-xs">Subheadline</label>
+              <input type="text" value={subheadline} onChange={(e) => setSubheadline(e.target.value)} className="w-full px-sm py-xs rounded-lg border border-outline-variant bg-surface text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition" />
             </div>
             <div>
-              <label style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "4px" }}>CTA Text</label>
-              <input type="text" value={ctaText} onChange={(e) => setCtaText(e.target.value)} style={{ width: "100%", padding: "8px", border: "1px solid #d1d5db", borderRadius: "6px" }} />
+              <label className="block text-label-md font-medium text-on-surface mb-xs">CTA Text</label>
+              <input type="text" value={ctaText} onChange={(e) => setCtaText(e.target.value)} className="w-full px-sm py-xs rounded-lg border border-outline-variant bg-surface text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition" />
             </div>
             <div>
-              <label style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "4px" }}>Discount Code (optional)</label>
-              <input type="text" value={discountCode} onChange={(e) => setDiscountCode(e.target.value)} style={{ width: "100%", padding: "8px", border: "1px solid #d1d5db", borderRadius: "6px" }} placeholder="WELCOME10" />
+              <label className="block text-label-md font-medium text-on-surface mb-xs">Discount Code (optional)</label>
+              <input type="text" value={discountCode} onChange={(e) => setDiscountCode(e.target.value)} className="w-full px-sm py-xs rounded-lg border border-outline-variant bg-surface text-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition" placeholder="WELCOME10" />
             </div>
           </div>
 
           {/* Live Preview */}
-          <div style={{ marginTop: "16px", marginBottom: "16px" }}>
-            <label style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "8px" }}>Live Preview</label>
-            <div style={{ padding: "24px", borderRadius: "8px", textAlign: "center", backgroundColor: bgColor, color: textColor }}>
-              <h3 style={{ margin: "0 0 8px", fontSize: "20px" }}>{headline}</h3>
-              <p style={{ margin: "0 0 16px", fontSize: "14px", opacity: 0.9 }}>{subheadline}</p>
-              <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
-                <input type="email" placeholder="Enter your email" style={{ padding: "8px 12px", borderRadius: "4px", border: "none", width: "200px" }} readOnly />
-                <button type="button" style={{ padding: "8px 16px", backgroundColor: buttonColor, color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+          <div className="mt-md mb-md">
+            <label className="block text-label-md font-medium text-on-surface mb-sm">Live Preview</label>
+            <div className="p-lg rounded-lg text-center" style={{ backgroundColor: bgColor, color: textColor }}>
+              <h3 className="text-headline-sm font-semibold mb-xs">{headline}</h3>
+              <p className="text-body-md mb-md opacity-90">{subheadline}</p>
+              <div className="flex gap-xs justify-center">
+                <input type="email" placeholder="Enter your email" className="px-sm py-xs rounded-md border-none w-[200px]" readOnly />
+                <button type="button" className="px-sm py-xs text-on-primary rounded-md border-none cursor-pointer" style={{ backgroundColor: buttonColor }}>
                   {ctaText}
                 </button>
               </div>
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+          <div className="grid grid-cols-3 gap-md mb-md">
             <div>
-              <label style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "4px" }}>Background Color</label>
-              <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} style={{ width: "100%", height: "36px", border: "1px solid #d1d5db", borderRadius: "6px" }} />
+              <label className="block text-label-md font-medium text-on-surface mb-xs">Background Color</label>
+              <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="w-full h-9 rounded-lg border border-outline-variant" />
             </div>
             <div>
-              <label style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "4px" }}>Text Color</label>
-              <input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} style={{ width: "100%", height: "36px", border: "1px solid #d1d5db", borderRadius: "6px" }} />
+              <label className="block text-label-md font-medium text-on-surface mb-xs">Text Color</label>
+              <input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="w-full h-9 rounded-lg border border-outline-variant" />
             </div>
             <div>
-              <label style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "4px" }}>Button Color</label>
-              <input type="color" value={buttonColor} onChange={(e) => setButtonColor(e.target.value)} style={{ width: "100%", height: "36px", border: "1px solid #d1d5db", borderRadius: "6px" }} />
+              <label className="block text-label-md font-medium text-on-surface mb-xs">Button Color</label>
+              <input type="color" value={buttonColor} onChange={(e) => setButtonColor(e.target.value)} className="w-full h-9 rounded-lg border border-outline-variant" />
             </div>
           </div>
 
-          <button type="button" onClick={handleCreate} style={{ padding: "8px 16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}>
+          <button type="button" onClick={handleCreate} className="px-sm py-xs rounded-lg bg-primary text-on-primary text-label-md font-semibold hover:opacity-90 transition-opacity">
             Create Form
           </button>
         </div>
       )}
 
       {/* Forms List */}
-      <div style={{ border: "1px solid #e5e7eb", borderRadius: "8px", overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm overflow-hidden">
+        <table className="w-full border-collapse">
           <thead>
-            <tr style={{ backgroundColor: "#f9fafb" }}>
-              <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600" }}>Name</th>
-              <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600" }}>Type</th>
-              <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600" }}>Trigger</th>
-              <th style={{ padding: "12px 16px", textAlign: "right", fontSize: "14px", fontWeight: "600" }}>Impressions</th>
-              <th style={{ padding: "12px 16px", textAlign: "right", fontSize: "14px", fontWeight: "600" }}>Conversions</th>
-              <th style={{ padding: "12px 16px", textAlign: "center", fontSize: "14px", fontWeight: "600" }}>Status</th>
-              <th style={{ padding: "12px 16px", textAlign: "center", fontSize: "14px", fontWeight: "600" }}>Actions</th>
+            <tr className="bg-surface-container-low border-b border-outline-variant">
+              <th className="px-md py-sm text-left text-label-md font-semibold text-on-surface">Name</th>
+              <th className="px-md py-sm text-left text-label-md font-semibold text-on-surface">Type</th>
+              <th className="px-md py-sm text-left text-label-md font-semibold text-on-surface">Trigger</th>
+              <th className="px-md py-sm text-right text-label-md font-semibold text-on-surface">Impressions</th>
+              <th className="px-md py-sm text-right text-label-md font-semibold text-on-surface">Conversions</th>
+              <th className="px-md py-sm text-center text-label-md font-semibold text-on-surface">Status</th>
+              <th className="px-md py-sm text-center text-label-md font-semibold text-on-surface">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-outline-variant">
             {forms.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ padding: "24px", textAlign: "center", color: "#6b7280" }}>
-                  No signup forms yet. Create your first one!
+                <td colSpan={7} className="py-xl px-md text-center text-on-surface-variant">
+                  <div className="flex flex-col items-center justify-center gap-sm">
+                    <Icon name="mail" size={48} className="opacity-40" />
+                    <p className="text-body-lg font-medium">No signup forms yet</p>
+                    <p className="text-body-md">Create your first one!</p>
+                  </div>
                 </td>
               </tr>
             ) : (
               forms.map((f) => (
-                <tr key={f.id} style={{ borderTop: "1px solid #e5e7eb" }}>
-                  <td style={{ padding: "12px 16px", fontSize: "14px" }}>{f.name}</td>
-                  <td style={{ padding: "12px 16px", fontSize: "14px" }}>{f.formType}</td>
-                  <td style={{ padding: "12px 16px", fontSize: "14px" }}>{f.trigger}</td>
-                  <td style={{ padding: "12px 16px", textAlign: "right", fontSize: "14px" }}>{f.impressions}</td>
-                  <td style={{ padding: "12px 16px", textAlign: "right", fontSize: "14px" }}>{f.conversions}</td>
-                  <td style={{ padding: "12px 16px", textAlign: "center" }}>
-                    <span style={{
-                      padding: "2px 8px",
-                      borderRadius: "12px",
-                      fontSize: "12px",
-                      fontWeight: "500",
-                      backgroundColor: f.isActive ? "#d1fae5" : "#e5e7eb",
-                      color: f.isActive ? "#065f46" : "#374151",
-                    }}>
+                <tr key={f.id} className="hover:bg-surface-container-low transition-colors">
+                  <td className="px-md py-sm text-body-md text-on-surface">{f.name}</td>
+                  <td className="px-md py-sm text-body-md text-on-surface">{f.formType}</td>
+                  <td className="px-md py-sm text-body-md text-on-surface">{f.trigger}</td>
+                  <td className="px-md py-sm text-right text-body-md text-on-surface">{f.impressions}</td>
+                  <td className="px-md py-sm text-right text-body-md text-on-surface">{f.conversions}</td>
+                  <td className="px-md py-sm text-center">
+                    <span className={`inline-block px-sm py-[2px] rounded-full text-label-sm font-semibold ${
+                      f.isActive ? "bg-secondary-container text-on-secondary-container" : "bg-surface-container-high text-on-surface-variant"
+                    }`}>
                       {f.isActive ? "Active" : "Inactive"}
                     </span>
                   </td>
-                  <td style={{ padding: "12px 16px", textAlign: "center" }}>
-                    <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
+                  <td className="px-md py-sm text-center">
+                    <div className="flex gap-xs justify-center">
                       <button
                         type="button"
                         onClick={() => handleToggle(f.id, f.isActive)}
-                        style={{ padding: "4px 8px", fontSize: "12px", border: "1px solid #d1d5db", borderRadius: "4px", cursor: "pointer", backgroundColor: "#fff" }}
+                        className="px-sm py-[4px] text-label-sm font-semibold border border-outline-variant rounded-md hover:bg-surface-container-low transition-colors"
                       >
                         {f.isActive ? "Deactivate" : "Activate"}
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDelete(f.id)}
-                        style={{ padding: "4px 8px", fontSize: "12px", border: "1px solid #fca5a5", borderRadius: "4px", cursor: "pointer", backgroundColor: "#fff", color: "#dc2626" }}
+                        className="px-sm py-[4px] text-label-sm font-semibold border border-error-container text-on-error-container rounded-md hover:bg-error-container transition-colors"
                       >
                         Delete
                       </button>
@@ -374,6 +373,6 @@ export default function SignupFormsPage() {
           </tbody>
         </table>
       </div>
-    </div>
+    </main>
   );
 }

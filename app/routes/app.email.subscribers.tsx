@@ -6,6 +6,7 @@ import { json } from "@remix-run/node";
 import { useActionData, useLoaderData, useSubmit, useSearchParams, Link, useLocation } from "@remix-run/react";
 import { authenticate } from "~/shopify.server";
 import { db } from "~/db.server";
+import { Icon } from "~/components/Icon";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { session } = await authenticate.admin(request);
@@ -185,22 +186,18 @@ const EMAIL_NAV = [
 function EmailNav() {
   const location = useLocation();
   return (
-    <div style={{ display: "flex", gap: "4px", marginBottom: "24px", borderBottom: "1px solid #e5e7eb", paddingBottom: "12px" }}>
+    <div className="flex gap-xs mb-lg border-b border-outline-variant pb-sm">
       {EMAIL_NAV.map((item) => {
         const isActive = location.pathname === item.path;
         return (
           <Link
             key={item.path}
             to={item.path}
-            style={{
-              padding: "8px 16px",
-              fontSize: "14px",
-              fontWeight: isActive ? "600" : "400",
-              color: isActive ? "#3b82f6" : "#6b7280",
-              borderBottom: isActive ? "2px solid #3b82f6" : "2px solid transparent",
-              textDecoration: "none",
-              marginBottom: "-14px",
-            }}
+            className={`px-md py-xs text-label-md font-medium border-b-2 -mb-[2px] transition-colors ${
+              isActive
+                ? "text-primary border-primary"
+                : "text-on-surface-variant border-transparent hover:text-on-surface"
+            }`}
           >
             {item.label}
           </Link>
@@ -242,87 +239,88 @@ export default function EmailSubscribersPage() {
   };
 
   return (
-    <div style={{ padding: "24px", maxWidth: "1200px", margin: "0 auto" }}>
+    <main className="p-lg max-w-container-max mx-auto font-sans pb-24">
       <EmailNav />
-      <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "24px" }}>Subscribers</h1>
+      <h1 className="text-display-lg font-bold text-on-surface mb-lg">Subscribers</h1>
 
       {(actionData as { error?: string })?.error && (
-        <div role="alert" style={{ padding: "12px", marginBottom: "16px", backgroundColor: "#fee2e2", borderRadius: "8px", color: "#991b1b" }}>
+        <div role="alert" className="mb-md px-sm py-xs rounded-lg bg-error-container text-on-error-container flex items-center gap-xs text-label-md">
+          <Icon name="error" size={16} />
           {(actionData as { error: string }).error}
         </div>
       )}
 
       {(actionData as { message?: string })?.message && (
-        <div role="status" style={{ padding: "12px", marginBottom: "16px", backgroundColor: "#d1fae5", borderRadius: "8px", color: "#065f46" }}>
+        <div role="status" className="mb-md px-sm py-xs rounded-lg bg-secondary-container text-on-secondary-container flex items-center gap-xs text-label-md">
+          <Icon name="check_circle" size={16} />
           {(actionData as { message: string }).message}
         </div>
       )}
 
       {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", marginBottom: "16px" }}>
-        <div style={{ padding: "16px", border: "1px solid #e5e7eb", borderRadius: "8px", textAlign: "center" }}>
-          <div style={{ fontSize: "24px", fontWeight: "bold" }}>{totalCount}</div>
-          <div style={{ fontSize: "14px", color: "#6b7280" }}>Total Contacts</div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-md mb-md">
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md text-center shadow-sm">
+          <div className="text-headline-md font-bold text-on-surface">{totalCount}</div>
+          <div className="text-body-md text-on-surface-variant">Total Contacts</div>
         </div>
-        <div style={{ padding: "16px", border: "1px solid #e5e7eb", borderRadius: "8px", textAlign: "center" }}>
-          <div style={{ fontSize: "24px", fontWeight: "bold", color: "#059669" }}>{subscribedCount}</div>
-          <div style={{ fontSize: "14px", color: "#6b7280" }}>Subscribed</div>
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md text-center shadow-sm">
+          <div className="text-headline-md font-bold text-on-secondary-container">{subscribedCount}</div>
+          <div className="text-body-md text-on-surface-variant">Subscribed</div>
         </div>
-        <div style={{ padding: "16px", border: "1px solid #e5e7eb", borderRadius: "8px", textAlign: "center" }}>
-          <div style={{ fontSize: "24px", fontWeight: "bold", color: "#dc2626" }}>{unsubscribedCount}</div>
-          <div style={{ fontSize: "14px", color: "#6b7280" }}>Unsubscribed</div>
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md text-center shadow-sm">
+          <div className="text-headline-md font-bold text-on-error-container">{unsubscribedCount}</div>
+          <div className="text-body-md text-on-surface-variant">Unsubscribed</div>
         </div>
       </div>
 
       {/* Predictive Analytics - Churn Risk Stats */}
-      <div style={{ padding: "16px", border: "1px solid #e5e7eb", borderRadius: "8px", marginBottom: "24px", backgroundColor: "#fafafa" }}>
-        <h3 style={{ fontSize: "14px", fontWeight: "600", margin: "0 0 12px", color: "#374151" }}>Predictive Analytics</h3>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
-          <div style={{ padding: "12px", backgroundColor: "#fef2f2", borderRadius: "6px", textAlign: "center", border: "1px solid #fecaca" }}>
-            <div style={{ fontSize: "20px", fontWeight: "bold", color: "#dc2626" }}>{churnStats.high}</div>
-            <div style={{ fontSize: "12px", color: "#991b1b" }}>High Churn Risk</div>
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md mb-lg shadow-sm">
+        <h3 className="text-label-md font-semibold text-on-surface mb-sm">Predictive Analytics</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-md">
+          <div className="bg-error-container border border-error-container rounded-lg p-sm text-center">
+            <div className="text-headline-sm font-bold text-on-error-container">{churnStats.high}</div>
+            <div className="text-label-sm text-on-error-container">High Churn Risk</div>
           </div>
-          <div style={{ padding: "12px", backgroundColor: "#fef3c7", borderRadius: "6px", textAlign: "center", border: "1px solid #fde68a" }}>
-            <div style={{ fontSize: "20px", fontWeight: "bold", color: "#92400e" }}>{churnStats.medium}</div>
-            <div style={{ fontSize: "12px", color: "#92400e" }}>Medium Churn Risk</div>
+          <div className="bg-tertiary-fixed border border-tertiary-fixed-dim rounded-lg p-sm text-center">
+            <div className="text-headline-sm font-bold text-on-tertiary-fixed-variant">{churnStats.medium}</div>
+            <div className="text-label-sm text-on-tertiary-fixed-variant">Medium Churn Risk</div>
           </div>
-          <div style={{ padding: "12px", backgroundColor: "#d1fae5", borderRadius: "6px", textAlign: "center", border: "1px solid #bbf7d0" }}>
-            <div style={{ fontSize: "20px", fontWeight: "bold", color: "#059669" }}>{churnStats.low}</div>
-            <div style={{ fontSize: "12px", color: "#065f46" }}>Low Churn Risk</div>
+          <div className="bg-secondary-container border border-secondary-container rounded-lg p-sm text-center">
+            <div className="text-headline-sm font-bold text-on-secondary-container">{churnStats.low}</div>
+            <div className="text-label-sm text-on-secondary-container">Low Churn Risk</div>
           </div>
         </div>
       </div>
 
       {/* Search and Filter */}
-      <div style={{ display: "flex", gap: "12px", marginBottom: "16px", alignItems: "center" }}>
-        <form onSubmit={handleSearch} style={{ display: "flex", gap: "8px", flex: 1 }}>
-          <input
-            name="search"
-            type="text"
-            defaultValue={search}
-            placeholder="Search by email or name..."
-            style={{ flex: 1, padding: "8px 12px", border: "1px solid #d1d5db", borderRadius: "6px" }}
-          />
-          <button type="submit" style={{ padding: "8px 16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}>
+      <div className="flex flex-col sm:flex-row gap-sm mb-md items-stretch sm:items-center">
+        <form onSubmit={handleSearch} className="flex gap-xs flex-1">
+          <div className="relative flex-1">
+            <Icon name="search" size={18} className="absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant" />
+            <input
+              name="search"
+              type="text"
+              defaultValue={search}
+              placeholder="Search by email or name..."
+              className="w-full pl-[36px] pr-sm py-xs rounded-lg border border-outline-variant bg-surface text-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition"
+            />
+          </div>
+          <button type="submit" className="px-sm py-xs rounded-lg bg-primary text-on-primary text-label-md font-semibold hover:opacity-90 transition-opacity">
             Search
           </button>
         </form>
 
-        <div style={{ display: "flex", gap: "4px" }}>
+        <div className="flex gap-xs">
           {["all", "subscribed", "unsubscribed"].map((f) => (
             <button
               key={f}
               type="button"
               onClick={() => handleFilter(f)}
-              style={{
-                padding: "6px 12px",
-                fontSize: "13px",
-                border: "1px solid #d1d5db",
-                borderRadius: "6px",
-                cursor: "pointer",
-                backgroundColor: filter === f ? "#3b82f6" : "#fff",
-                color: filter === f ? "#fff" : "#374151",
-              }}
+              className={`px-sm py-[6px] rounded-lg text-label-md font-semibold transition-colors ${
+                filter === f
+                  ? "bg-primary text-on-primary"
+                  : "border border-outline-variant text-on-surface hover:bg-surface-container-low"
+              }`}
             >
               {f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
@@ -331,74 +329,69 @@ export default function EmailSubscribersPage() {
       </div>
 
       {/* Subscriber Table */}
-      <div style={{ border: "1px solid #e5e7eb", borderRadius: "8px", overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm overflow-hidden">
+        <table className="w-full border-collapse">
           <thead>
-            <tr style={{ backgroundColor: "#f9fafb" }}>
-              <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600" }}>Email</th>
-              <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600" }}>Name</th>
-              <th style={{ padding: "12px 16px", textAlign: "center", fontSize: "14px", fontWeight: "600" }}>Status</th>
-              <th style={{ padding: "12px 16px", textAlign: "right", fontSize: "14px", fontWeight: "600" }}>Orders</th>
-              <th style={{ padding: "12px 16px", textAlign: "right", fontSize: "14px", fontWeight: "600" }}>Spent</th>
-              <th style={{ padding: "12px 16px", textAlign: "center", fontSize: "14px", fontWeight: "600" }}>Churn Risk</th>
-              <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600" }}>Next Order</th>
-              <th style={{ padding: "12px 16px", textAlign: "center", fontSize: "14px", fontWeight: "600" }}>Actions</th>
+            <tr className="bg-surface-container-low border-b border-outline-variant">
+              <th className="px-md py-sm text-left text-label-md font-semibold text-on-surface">Email</th>
+              <th className="px-md py-sm text-left text-label-md font-semibold text-on-surface">Name</th>
+              <th className="px-md py-sm text-center text-label-md font-semibold text-on-surface">Status</th>
+              <th className="px-md py-sm text-right text-label-md font-semibold text-on-surface">Orders</th>
+              <th className="px-md py-sm text-right text-label-md font-semibold text-on-surface">Spent</th>
+              <th className="px-md py-sm text-center text-label-md font-semibold text-on-surface">Churn Risk</th>
+              <th className="px-md py-sm text-left text-label-md font-semibold text-on-surface">Next Order</th>
+              <th className="px-md py-sm text-center text-label-md font-semibold text-on-surface">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-outline-variant">
             {customers.length === 0 ? (
               <tr>
-                <td colSpan={8} style={{ padding: "24px", textAlign: "center", color: "#6b7280" }}>
-                  No subscribers found.
+                <td colSpan={8} className="py-xl px-md text-center text-on-surface-variant">
+                  <div className="flex flex-col items-center justify-center gap-sm">
+                    <Icon name="group" size={48} className="opacity-40" />
+                    <p className="text-body-lg font-medium">No subscribers found</p>
+                  </div>
                 </td>
               </tr>
             ) : (
               customers.map((c) => (
-                <tr key={c.id} style={{ borderTop: "1px solid #e5e7eb" }}>
-                  <td style={{ padding: "12px 16px", fontSize: "14px" }}>{c.email}</td>
-                  <td style={{ padding: "12px 16px", fontSize: "14px", color: "#6b7280" }}>
+                <tr key={c.id} className="hover:bg-surface-container-low transition-colors">
+                  <td className="px-md py-sm text-body-md text-on-surface">{c.email}</td>
+                  <td className="px-md py-sm text-body-md text-on-surface-variant">
                     {[c.firstName, c.lastName].filter(Boolean).join(" ") || "—"}
                   </td>
-                  <td style={{ padding: "12px 16px", textAlign: "center" }}>
-                    <span style={{
-                      padding: "2px 8px",
-                      borderRadius: "12px",
-                      fontSize: "12px",
-                      fontWeight: "500",
-                      backgroundColor: c.isSubscribed ? "#d1fae5" : "#fee2e2",
-                      color: c.isSubscribed ? "#065f46" : "#991b1b",
-                    }}>
+                  <td className="px-md py-sm text-center">
+                    <span className={`inline-block px-sm py-[2px] rounded-full text-label-sm font-semibold ${
+                      c.isSubscribed ? "bg-secondary-container text-on-secondary-container" : "bg-error-container text-on-error-container"
+                    }`}>
                       {c.isSubscribed ? "Subscribed" : "Unsubscribed"}
                     </span>
                   </td>
-                  <td style={{ padding: "12px 16px", textAlign: "right", fontSize: "14px" }}>{c.totalOrders}</td>
-                  <td style={{ padding: "12px 16px", textAlign: "right", fontSize: "14px", color: "#6b7280" }}>
+                  <td className="px-md py-sm text-right text-body-md text-on-surface">{c.totalOrders}</td>
+                  <td className="px-md py-sm text-right text-body-md text-on-surface-variant">
                     ${c.totalSpent?.toFixed(2) ?? "0.00"}
                   </td>
-                  <td style={{ padding: "12px 16px", textAlign: "center" }}>
-                    <span style={{
-                      padding: "2px 8px",
-                      borderRadius: "12px",
-                      fontSize: "11px",
-                      fontWeight: "600",
-                      textTransform: "uppercase",
-                      backgroundColor: c.churnRisk === "high" ? "#fef2f2" : c.churnRisk === "medium" ? "#fef3c7" : c.churnRisk === "low" ? "#d1fae5" : "#e5e7eb",
-                      color: c.churnRisk === "high" ? "#dc2626" : c.churnRisk === "medium" ? "#92400e" : c.churnRisk === "low" ? "#059669" : "#374151",
-                    }}>
+                  <td className="px-md py-sm text-center">
+                    <span className={`inline-block px-sm py-[2px] rounded-full text-label-sm font-semibold uppercase ${
+                      c.churnRisk === "high" ? "bg-error-container text-on-error-container" :
+                      c.churnRisk === "medium" ? "bg-tertiary-fixed text-on-tertiary-fixed-variant" :
+                      c.churnRisk === "low" ? "bg-secondary-container text-on-secondary-container" :
+                      "bg-surface-container-high text-on-surface-variant"
+                    }`}>
                       {c.churnRisk === "unknown" ? "—" : c.churnRisk}
                     </span>
                   </td>
-                  <td style={{ padding: "12px 16px", fontSize: "13px", color: "#6b7280" }}>
+                  <td className="px-md py-sm text-body-sm text-on-surface-variant">
                     {c.predictedNextOrderAt
                       ? new Date(c.predictedNextOrderAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
                       : "—"}
                   </td>
-                  <td style={{ padding: "12px 16px", textAlign: "center" }}>
+                  <td className="px-md py-sm text-center">
                     {c.isSubscribed ? (
                       <button
                         type="button"
                         onClick={() => handleUnsubscribe(c.id)}
-                        style={{ padding: "4px 8px", fontSize: "12px", border: "1px solid #fca5a5", borderRadius: "4px", cursor: "pointer", backgroundColor: "#fff", color: "#dc2626" }}
+                        className="px-sm py-[4px] text-label-sm font-semibold border border-error-container text-on-error-container rounded-md hover:bg-error-container transition-colors"
                       >
                         Unsubscribe
                       </button>
@@ -406,7 +399,7 @@ export default function EmailSubscribersPage() {
                       <button
                         type="button"
                         onClick={() => handleResubscribe(c.id)}
-                        style={{ padding: "4px 8px", fontSize: "12px", border: "1px solid #6ee7b7", borderRadius: "4px", cursor: "pointer", backgroundColor: "#fff", color: "#059669" }}
+                        className="px-sm py-[4px] text-label-sm font-semibold border border-secondary-container text-on-secondary-container rounded-md hover:bg-secondary-container transition-colors"
                       >
                         Resubscribe
                       </button>
@@ -421,30 +414,30 @@ export default function EmailSubscribersPage() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginTop: "16px" }}>
+        <div className="flex items-center justify-center gap-xs mt-md">
           {page > 1 && (
             <button
               type="button"
               onClick={() => setSearchParams({ search, filter, page: String(page - 1) })}
-              style={{ padding: "6px 12px", border: "1px solid #d1d5db", borderRadius: "6px", cursor: "pointer", backgroundColor: "#fff" }}
+              className="px-sm py-xs rounded-lg border border-outline-variant text-label-md font-semibold text-on-surface hover:bg-surface-container-low transition-colors"
             >
               Previous
             </button>
           )}
-          <span style={{ padding: "6px 12px", fontSize: "14px", color: "#6b7280" }}>
-            Page {page} of {totalPages}
+          <span className="px-sm py-xs text-body-md text-on-surface-variant">
+            Page <span className="font-semibold text-on-surface">{page}</span> of <span className="font-semibold text-on-surface">{totalPages}</span>
           </span>
           {page < totalPages && (
             <button
               type="button"
               onClick={() => setSearchParams({ search, filter, page: String(page + 1) })}
-              style={{ padding: "6px 12px", border: "1px solid #d1d5db", borderRadius: "6px", cursor: "pointer", backgroundColor: "#fff" }}
+              className="px-sm py-xs rounded-lg border border-outline-variant text-label-md font-semibold text-on-surface hover:bg-surface-container-low transition-colors"
             >
               Next
             </button>
           )}
         </div>
       )}
-    </div>
+    </main>
   );
 }

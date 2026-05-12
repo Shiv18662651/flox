@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import { authenticate } from "~/shopify.server";
 import { db } from "~/db.server";
 import { renderEmailHtml, type EmailBlock } from "~/utils/email-renderer.server";
+import { Icon } from "~/components/Icon";
 import { generateFlowFromDescription } from "~/ai.server";
 
 const TRIGGER_OPTIONS = [
@@ -148,22 +149,18 @@ const EMAIL_NAV = [
 function EmailNav() {
   const location = useLocation();
   return (
-    <div style={{ display: "flex", gap: "4px", marginBottom: "24px", borderBottom: "1px solid #e5e7eb", paddingBottom: "12px" }}>
+    <div className="flex gap-xs mb-lg border-b border-outline-variant pb-sm">
       {EMAIL_NAV.map((item) => {
         const isActive = location.pathname === item.path;
         return (
           <Link
             key={item.path}
             to={item.path}
-            style={{
-              padding: "8px 16px",
-              fontSize: "14px",
-              fontWeight: isActive ? "600" : "400",
-              color: isActive ? "#3b82f6" : "#6b7280",
-              borderBottom: isActive ? "2px solid #3b82f6" : "2px solid transparent",
-              textDecoration: "none",
-              marginBottom: "-14px",
-            }}
+            className={`px-md py-xs text-label-md font-medium border-b-2 -mb-[2px] transition-colors ${
+              isActive
+                ? "text-primary border-primary"
+                : "text-on-surface-variant border-transparent hover:text-on-surface"
+            }`}
           >
             {item.label}
           </Link>
@@ -242,22 +239,23 @@ export default function EmailAutomationsPage() {
   };
 
   return (
-    <div style={{ padding: "24px", maxWidth: "1200px", margin: "0 auto" }}>
+    <main className="p-lg max-w-container-max mx-auto font-sans pb-24">
       <EmailNav />
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-        <h1 style={{ fontSize: "24px", fontWeight: "bold" }}>Email Automations</h1>
-        <div style={{ display: "flex", gap: "8px" }}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-md mb-lg">
+        <h1 className="text-display-lg font-bold text-on-surface">Email Automations</h1>
+        <div className="flex gap-xs">
           <button
             type="button"
             onClick={() => setShowAiModal(true)}
-            style={{ padding: "8px 16px", backgroundColor: "#7c3aed", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
+            className="inline-flex items-center gap-xs bg-tertiary-container text-on-tertiary-container text-label-md font-semibold px-md py-xs rounded-lg hover:opacity-90 transition-opacity shadow-sm"
           >
-            <span>✨</span> AI Builder
+            <Icon name="auto_awesome" size={18} />
+            AI Builder
           </button>
           <button
             type="button"
             onClick={() => setShowForm(!showForm)}
-            style={{ padding: "8px 16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}
+            className="inline-flex items-center gap-xs bg-primary text-on-primary text-label-md font-semibold px-md py-xs rounded-lg hover:opacity-90 transition-opacity shadow-sm"
           >
             {showForm ? "Cancel" : "New Automation"}
           </button>
@@ -265,23 +263,26 @@ export default function EmailAutomationsPage() {
       </div>
 
       {(actionData as { error?: string })?.error && (
-        <div role="alert" style={{ padding: "12px", marginBottom: "16px", backgroundColor: "#fee2e2", borderRadius: "8px", color: "#991b1b" }}>
+        <div role="alert" className="mb-md px-sm py-xs rounded-lg bg-error-container text-on-error-container flex items-center gap-xs text-label-md">
+          <Icon name="error" size={16} />
           {(actionData as { error: string }).error}
         </div>
       )}
 
       {(actionData as { message?: string })?.message && (
-        <div role="status" style={{ padding: "12px", marginBottom: "16px", backgroundColor: "#d1fae5", borderRadius: "8px", color: "#065f46" }}>
+        <div role="status" className="mb-md px-sm py-xs rounded-lg bg-secondary-container text-on-secondary-container flex items-center gap-xs text-label-md">
+          <Icon name="check_circle" size={16} />
           {(actionData as { message: string }).message}
         </div>
       )}
 
       {showAiModal && (
-        <div style={{ border: "1px solid #e5e7eb", borderRadius: "8px", padding: "16px", marginBottom: "24px", backgroundColor: "#faf5ff" }}>
-          <h2 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
-            <span>✨</span> AI Flow Builder
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md mb-lg shadow-sm">
+          <h2 className="text-headline-sm font-semibold text-on-surface mb-sm flex items-center gap-xs">
+            <Icon name="auto_awesome" size={20} className="text-tertiary" />
+            AI Flow Builder
           </h2>
-          <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "12px" }}>
+          <p className="text-body-md text-on-surface-variant mb-md">
             Describe the automation you want and let AI build it for you.
           </p>
           <textarea
@@ -289,9 +290,9 @@ export default function EmailAutomationsPage() {
             onChange={(e) => setAiPrompt(e.target.value)}
             rows={3}
             placeholder="e.g. Send a welcome email to new customers with a 10% discount code, 1 hour after they sign up"
-            style={{ width: "100%", padding: "8px", border: "1px solid #d1d5db", borderRadius: "6px", marginBottom: "12px" }}
+            className="w-full px-sm py-xs rounded-lg border border-outline-variant bg-surface text-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition mb-md"
           />
-          <div style={{ display: "flex", gap: "8px" }}>
+          <div className="flex gap-xs">
             <button
               type="button"
               disabled={isGenerating}
@@ -301,14 +302,14 @@ export default function EmailAutomationsPage() {
                 fd.set("description", aiPrompt);
                 submit(fd, { method: "post" });
               }}
-              style={{ padding: "8px 16px", backgroundColor: "#7c3aed", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", opacity: isGenerating ? 0.6 : 1 }}
+              className="px-sm py-xs rounded-lg bg-tertiary-container text-on-tertiary-container text-label-md font-semibold hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {isGenerating ? "Generating..." : "Generate Flow"}
             </button>
             <button
               type="button"
               onClick={() => setShowAiModal(false)}
-              style={{ padding: "8px 16px", backgroundColor: "#fff", color: "#374151", border: "1px solid #d1d5db", borderRadius: "6px", cursor: "pointer" }}
+              className="px-sm py-xs rounded-lg border border-outline-variant text-label-md font-semibold text-on-surface hover:bg-surface-container-low transition-colors"
             >
               Cancel
             </button>
@@ -317,100 +318,99 @@ export default function EmailAutomationsPage() {
       )}
 
       {showForm && (
-        <div style={{ border: "1px solid #e5e7eb", borderRadius: "8px", padding: "16px", marginBottom: "24px" }}>
-          <h2 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "16px" }}>
-            {aiGenerated ? "✨ AI-Generated Flow (Review & Save)" : "Create Automation"}
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md mb-lg shadow-sm">
+          <h2 className="text-headline-sm font-semibold text-on-surface mb-md">
+            {aiGenerated ? "AI-Generated Flow (Review & Save)" : "Create Automation"}
           </h2>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-md mb-md">
             <div>
-              <label htmlFor="auto-name" style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "4px" }}>Name</label>
-              <input id="auto-name" type="text" value={name} onChange={(e) => setName(e.target.value)} style={{ width: "100%", padding: "8px", border: "1px solid #d1d5db", borderRadius: "6px" }} placeholder="Automation name" />
+              <label htmlFor="auto-name" className="block text-label-md font-medium text-on-surface mb-xs">Name</label>
+              <input id="auto-name" type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-sm py-xs rounded-lg border border-outline-variant bg-surface text-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition" placeholder="Automation name" />
             </div>
             <div>
-              <label htmlFor="auto-trigger" style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "4px" }}>Trigger</label>
-              <select id="auto-trigger" value={trigger} onChange={(e) => setTrigger(e.target.value)} style={{ width: "100%", padding: "8px", border: "1px solid #d1d5db", borderRadius: "6px" }}>
+              <label htmlFor="auto-trigger" className="block text-label-md font-medium text-on-surface mb-xs">Trigger</label>
+              <select id="auto-trigger" value={trigger} onChange={(e) => setTrigger(e.target.value)} className="w-full px-sm py-xs rounded-lg border border-outline-variant bg-surface text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition appearance-none">
                 {TRIGGER_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label htmlFor="auto-subject" style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "4px" }}>Subject</label>
-              <input id="auto-subject" type="text" value={subject} onChange={(e) => setSubject(e.target.value)} style={{ width: "100%", padding: "8px", border: "1px solid #d1d5db", borderRadius: "6px" }} placeholder="Email subject" />
+              <label htmlFor="auto-subject" className="block text-label-md font-medium text-on-surface mb-xs">Subject</label>
+              <input id="auto-subject" type="text" value={subject} onChange={(e) => setSubject(e.target.value)} className="w-full px-sm py-xs rounded-lg border border-outline-variant bg-surface text-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition" placeholder="Email subject" />
             </div>
             <div>
-              <label htmlFor="auto-delay" style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "4px" }}>Delay (minutes)</label>
-              <input id="auto-delay" type="number" value={delayMinutes} onChange={(e) => setDelayMinutes(e.target.value)} style={{ width: "100%", padding: "8px", border: "1px solid #d1d5db", borderRadius: "6px" }} />
+              <label htmlFor="auto-delay" className="block text-label-md font-medium text-on-surface mb-xs">Delay (minutes)</label>
+              <input id="auto-delay" type="number" value={delayMinutes} onChange={(e) => setDelayMinutes(e.target.value)} className="w-full px-sm py-xs rounded-lg border border-outline-variant bg-surface text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition" />
             </div>
           </div>
 
-          <div style={{ marginBottom: "12px" }}>
-            <label htmlFor="auto-blocks" style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "4px" }}>Template Blocks (JSON)</label>
-            <textarea id="auto-blocks" value={blocksText} onChange={(e) => setBlocksText(e.target.value)} rows={6} style={{ width: "100%", padding: "8px", border: "1px solid #d1d5db", borderRadius: "6px", fontFamily: "monospace", fontSize: "12px" }} />
+          <div className="mb-md">
+            <label htmlFor="auto-blocks" className="block text-label-md font-medium text-on-surface mb-xs">Template Blocks (JSON)</label>
+            <textarea id="auto-blocks" value={blocksText} onChange={(e) => setBlocksText(e.target.value)} rows={6} className="w-full px-sm py-xs rounded-lg border border-outline-variant bg-surface text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition font-mono text-label-sm" />
           </div>
 
-          <button type="button" onClick={handleCreate} style={{ padding: "8px 16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}>
+          <button type="button" onClick={handleCreate} className="px-sm py-xs rounded-lg bg-primary text-on-primary text-label-md font-semibold hover:opacity-90 transition-opacity">
             Create Automation
           </button>
         </div>
       )}
 
-      <div style={{ border: "1px solid #e5e7eb", borderRadius: "8px", overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm overflow-hidden">
+        <table className="w-full border-collapse">
           <thead>
-            <tr style={{ backgroundColor: "#f9fafb" }}>
-              <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600" }}>Name</th>
-              <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600" }}>Trigger</th>
-              <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600" }}>Subject</th>
-              <th style={{ padding: "12px 16px", textAlign: "right", fontSize: "14px", fontWeight: "600" }}>Delay</th>
-              <th style={{ padding: "12px 16px", textAlign: "right", fontSize: "14px", fontWeight: "600" }}>Sent</th>
-              <th style={{ padding: "12px 16px", textAlign: "center", fontSize: "14px", fontWeight: "600" }}>Status</th>
-              <th style={{ padding: "12px 16px", textAlign: "center", fontSize: "14px", fontWeight: "600" }}>Actions</th>
+            <tr className="bg-surface-container-low border-b border-outline-variant">
+              <th className="px-md py-sm text-left text-label-md font-semibold text-on-surface">Name</th>
+              <th className="px-md py-sm text-left text-label-md font-semibold text-on-surface">Trigger</th>
+              <th className="px-md py-sm text-left text-label-md font-semibold text-on-surface">Subject</th>
+              <th className="px-md py-sm text-right text-label-md font-semibold text-on-surface">Delay</th>
+              <th className="px-md py-sm text-right text-label-md font-semibold text-on-surface">Sent</th>
+              <th className="px-md py-sm text-center text-label-md font-semibold text-on-surface">Status</th>
+              <th className="px-md py-sm text-center text-label-md font-semibold text-on-surface">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-outline-variant">
             {automations.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ padding: "24px", textAlign: "center", color: "#6b7280" }}>
-                  No automations yet. Create your first one!
+                <td colSpan={7} className="py-xl px-md text-center text-on-surface-variant">
+                  <div className="flex flex-col items-center justify-center gap-sm">
+                    <Icon name="bolt" size={48} className="opacity-40" />
+                    <p className="text-body-lg font-medium">No automations yet</p>
+                    <p className="text-body-md">Create your first one!</p>
+                  </div>
                 </td>
               </tr>
             ) : (
               automations.map((a) => (
-                <tr key={a.id} style={{ borderTop: "1px solid #e5e7eb" }}>
-                  <td style={{ padding: "12px 16px", fontSize: "14px" }}>{a.name}</td>
-                  <td style={{ padding: "12px 16px", fontSize: "14px" }}>
+                <tr key={a.id} className="hover:bg-surface-container-low transition-colors">
+                  <td className="px-md py-sm text-body-md text-on-surface">{a.name}</td>
+                  <td className="px-md py-sm text-body-md text-on-surface">
                     {TRIGGER_OPTIONS.find((t) => t.value === a.trigger)?.label || a.trigger}
                   </td>
-                  <td style={{ padding: "12px 16px", fontSize: "14px", color: "#6b7280" }}>{a.subject}</td>
-                  <td style={{ padding: "12px 16px", textAlign: "right", fontSize: "14px" }}>{a.delayMinutes}m</td>
-                  <td style={{ padding: "12px 16px", textAlign: "right", fontSize: "14px" }}>{a.totalSent}</td>
-                  <td style={{ padding: "12px 16px", textAlign: "center" }}>
-                    <span style={{
-                      padding: "2px 8px",
-                      borderRadius: "12px",
-                      fontSize: "12px",
-                      fontWeight: "500",
-                      backgroundColor: a.isActive ? "#d1fae5" : "#e5e7eb",
-                      color: a.isActive ? "#065f46" : "#374151",
-                    }}>
+                  <td className="px-md py-sm text-body-md text-on-surface-variant">{a.subject}</td>
+                  <td className="px-md py-sm text-right text-body-md text-on-surface">{a.delayMinutes}m</td>
+                  <td className="px-md py-sm text-right text-body-md text-on-surface">{a.totalSent}</td>
+                  <td className="px-md py-sm text-center">
+                    <span className={`inline-block px-sm py-[2px] rounded-full text-label-sm font-semibold ${
+                      a.isActive ? "bg-secondary-container text-on-secondary-container" : "bg-surface-container-high text-on-surface-variant"
+                    }`}>
                       {a.isActive ? "Active" : "Inactive"}
                     </span>
                   </td>
-                  <td style={{ padding: "12px 16px", textAlign: "center" }}>
-                    <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
+                  <td className="px-md py-sm text-center">
+                    <div className="flex gap-xs justify-center">
                       <button
                         type="button"
                         onClick={() => handleToggle(a.id)}
-                        style={{ padding: "4px 8px", fontSize: "12px", border: "1px solid #d1d5db", borderRadius: "4px", cursor: "pointer", backgroundColor: "#fff" }}
+                        className="px-sm py-[4px] text-label-sm font-semibold border border-outline-variant rounded-md hover:bg-surface-container-low transition-colors"
                       >
                         {a.isActive ? "Deactivate" : "Activate"}
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDelete(a.id)}
-                        style={{ padding: "4px 8px", fontSize: "12px", border: "1px solid #fca5a5", borderRadius: "4px", cursor: "pointer", backgroundColor: "#fff", color: "#dc2626" }}
+                        className="px-sm py-[4px] text-label-sm font-semibold border border-error-container text-on-error-container rounded-md hover:bg-error-container transition-colors"
                       >
                         Delete
                       </button>
@@ -422,6 +422,6 @@ export default function EmailAutomationsPage() {
           </tbody>
         </table>
       </div>
-    </div>
+    </main>
   );
 }

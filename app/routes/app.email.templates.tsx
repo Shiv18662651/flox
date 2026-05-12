@@ -8,6 +8,7 @@ import { useState } from "react";
 import { authenticate } from "~/shopify.server";
 import { db } from "~/db.server";
 import { renderEmailHtml, type EmailBlock } from "~/utils/email-renderer.server";
+import { Icon } from "~/components/Icon";
 import {
   PREBUILT_TEMPLATE_LIST,
   getPrebuiltTemplate,
@@ -159,22 +160,18 @@ const EMAIL_NAV = [
 function EmailNav() {
   const location = useLocation();
   return (
-    <div style={{ display: "flex", gap: "4px", marginBottom: "24px", borderBottom: "1px solid #e5e7eb", paddingBottom: "12px" }}>
+    <div className="flex gap-xs mb-lg border-b border-outline-variant pb-sm">
       {EMAIL_NAV.map((item) => {
         const isActive = location.pathname === item.path;
         return (
           <Link
             key={item.path}
             to={item.path}
-            style={{
-              padding: "8px 16px",
-              fontSize: "14px",
-              fontWeight: isActive ? "600" : "400",
-              color: isActive ? "#3b82f6" : "#6b7280",
-              borderBottom: isActive ? "2px solid #3b82f6" : "2px solid transparent",
-              textDecoration: "none",
-              marginBottom: "-14px",
-            }}
+            className={`px-md py-xs text-label-md font-medium border-b-2 -mb-[2px] transition-colors ${
+              isActive
+                ? "text-primary border-primary"
+                : "text-on-surface-variant border-transparent hover:text-on-surface"
+            }`}
           >
             {item.label}
           </Link>
@@ -247,48 +244,51 @@ export default function EmailTemplatesPage() {
   };
 
   return (
-    <div style={{ padding: "24px", maxWidth: "1200px", margin: "0 auto" }}>
+    <main className="p-lg max-w-container-max mx-auto font-sans pb-24">
       <EmailNav />
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-        <h1 style={{ fontSize: "24px", fontWeight: "bold" }}>Email Templates</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-md mb-lg">
+        <h1 className="text-display-lg font-bold text-on-surface">Email Templates</h1>
         <button
           type="button"
           onClick={handleNew}
-          style={{ padding: "8px 16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}
+          className="inline-flex items-center gap-xs bg-primary text-on-primary text-label-md font-semibold px-md py-xs rounded-lg hover:opacity-90 transition-opacity shadow-sm"
         >
+          <Icon name="add" size={18} />
           New Template
         </button>
       </div>
 
       {(actionData as { error?: string })?.error && (
-        <div role="alert" style={{ padding: "12px", marginBottom: "16px", backgroundColor: "#fee2e2", borderRadius: "8px", color: "#991b1b" }}>
+        <div role="alert" className="mb-md px-sm py-xs rounded-lg bg-error-container text-on-error-container flex items-center gap-xs text-label-md">
+          <Icon name="error" size={16} />
           {(actionData as { error: string }).error}
         </div>
       )}
 
       {(actionData as { message?: string })?.message && (
-        <div role="status" style={{ padding: "12px", marginBottom: "16px", backgroundColor: "#d1fae5", borderRadius: "8px", color: "#065f46" }}>
+        <div role="status" className="mb-md px-sm py-xs rounded-lg bg-secondary-container text-on-secondary-container flex items-center gap-xs text-label-md">
+          <Icon name="check_circle" size={16} />
           {(actionData as { message: string }).message}
         </div>
       )}
 
-      <div style={{ border: "1px solid #e5e7eb", borderRadius: "8px", padding: "16px", marginBottom: "24px", backgroundColor: "#fafafa" }}>
-        <h2 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "4px" }}>Start from a prebuilt template</h2>
-        <p style={{ fontSize: "13px", color: "#6b7280", marginBottom: "12px" }}>
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md mb-lg shadow-sm">
+        <h2 className="text-headline-sm font-semibold text-on-surface mb-xs">Start from a prebuilt template</h2>
+        <p className="text-body-md text-on-surface-variant mb-md">
           Clone any of these ready-to-use templates, then edit the copy to match your brand.
         </p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px" }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-md">
           {prebuiltTemplates.map((tpl) => (
-            <div key={tpl.id} style={{ border: "1px solid #e5e7eb", borderRadius: "6px", padding: "12px", backgroundColor: "#fff" }}>
-              <div style={{ fontWeight: "600", fontSize: "14px", marginBottom: "4px" }}>{tpl.name}</div>
-              <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "8px", minHeight: "32px" }}>{tpl.description}</div>
-              <div style={{ fontSize: "11px", color: "#9ca3af", marginBottom: "8px" }}>
+            <div key={tpl.id} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-md flex flex-col gap-xs">
+              <div className="text-label-md font-semibold text-on-surface">{tpl.name}</div>
+              <div className="text-label-sm text-on-surface-variant min-h-[32px]">{tpl.description}</div>
+              <div className="text-label-sm text-on-surface-variant opacity-70">
                 Subject: {tpl.subject.length > 40 ? tpl.subject.slice(0, 37) + "..." : tpl.subject}
               </div>
               <button
                 type="button"
                 onClick={() => handleClonePrebuilt(tpl.id)}
-                style={{ width: "100%", padding: "6px 10px", fontSize: "12px", border: "1px solid #3b82f6", borderRadius: "4px", cursor: "pointer", backgroundColor: "#fff", color: "#3b82f6", fontWeight: "500" }}
+                className="mt-auto w-full px-sm py-xs text-label-sm font-semibold border border-primary text-primary rounded-md hover:bg-primary-container transition-colors"
               >
                 Clone Template
               </button>
@@ -297,65 +297,67 @@ export default function EmailTemplatesPage() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-lg">
         {/* Editor Panel */}
-        <div style={{ border: "1px solid #e5e7eb", borderRadius: "8px", padding: "16px" }}>
-          <h2 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "16px" }}>
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-sm">
+          <h2 className="text-headline-sm font-semibold text-on-surface mb-md">
             {editingId ? "Edit Template" : "New Template"}
           </h2>
 
-          <div style={{ marginBottom: "12px" }}>
-            <label htmlFor="template-name" style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "4px" }}>Name</label>
-            <input
-              id="template-name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              style={{ width: "100%", padding: "8px", border: "1px solid #d1d5db", borderRadius: "6px" }}
-              placeholder="Campaign name"
-            />
+          <div className="mb-md space-y-sm">
+            <div>
+              <label htmlFor="template-name" className="block text-label-md font-medium text-on-surface mb-xs">Name</label>
+              <input
+                id="template-name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-sm py-xs rounded-lg border border-outline-variant bg-surface text-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition"
+                placeholder="Campaign name"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="template-subject" className="block text-label-md font-medium text-on-surface mb-xs">Subject</label>
+              <input
+                id="template-subject"
+                type="text"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                className="w-full px-sm py-xs rounded-lg border border-outline-variant bg-surface text-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition"
+                placeholder="Email subject line"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="template-blocks" className="block text-label-md font-medium text-on-surface mb-xs">
+                Blocks (JSON)
+              </label>
+              <textarea
+                id="template-blocks"
+                value={blocksText}
+                onChange={(e) => setBlocksText(e.target.value)}
+                rows={12}
+                className="w-full px-sm py-xs rounded-lg border border-outline-variant bg-surface text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition font-mono text-label-sm"
+              />
+              <p className="text-label-sm text-on-surface-variant mt-xs">
+                Block types: text, image, button, divider, product
+              </p>
+            </div>
           </div>
 
-          <div style={{ marginBottom: "12px" }}>
-            <label htmlFor="template-subject" style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "4px" }}>Subject</label>
-            <input
-              id="template-subject"
-              type="text"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              style={{ width: "100%", padding: "8px", border: "1px solid #d1d5db", borderRadius: "6px" }}
-              placeholder="Email subject line"
-            />
-          </div>
-
-          <div style={{ marginBottom: "12px" }}>
-            <label htmlFor="template-blocks" style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "4px" }}>
-              Blocks (JSON)
-            </label>
-            <textarea
-              id="template-blocks"
-              value={blocksText}
-              onChange={(e) => setBlocksText(e.target.value)}
-              rows={12}
-              style={{ width: "100%", padding: "8px", border: "1px solid #d1d5db", borderRadius: "6px", fontFamily: "monospace", fontSize: "12px" }}
-            />
-            <p style={{ fontSize: "12px", color: "#6b7280", marginTop: "4px" }}>
-              Block types: text, image, button, divider, product
-            </p>
-          </div>
-
-          <div style={{ display: "flex", gap: "8px" }}>
+          <div className="flex gap-xs">
             <button
               type="button"
               onClick={handlePreview}
-              style={{ padding: "8px 16px", backgroundColor: "#6b7280", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}
+              className="px-sm py-xs rounded-lg border border-outline-variant text-label-md font-semibold text-on-surface hover:bg-surface-container-low transition-colors"
             >
               Preview
             </button>
             <button
               type="button"
               onClick={handleSave}
-              style={{ padding: "8px 16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}
+              className="px-sm py-xs rounded-lg bg-primary text-on-primary text-label-md font-semibold hover:opacity-90 transition-opacity"
             >
               Save Template
             </button>
@@ -363,40 +365,39 @@ export default function EmailTemplatesPage() {
         </div>
 
         {/* Preview / Template List Panel */}
-        <div>
+        <div className="space-y-md">
           {previewHtml && (
-            <div style={{ border: "1px solid #e5e7eb", borderRadius: "8px", padding: "16px", marginBottom: "16px" }}>
-              <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>Preview</h3>
+            <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-sm">
+              <h3 className="text-headline-sm font-semibold text-on-surface mb-sm">Preview</h3>
               <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
             </div>
           )}
 
-          <div style={{ border: "1px solid #e5e7eb", borderRadius: "8px", padding: "16px" }}>
-            <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "12px" }}>Saved Templates</h3>
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-sm">
+            <h3 className="text-headline-sm font-semibold text-on-surface mb-md">Saved Templates</h3>
             {campaigns.length === 0 ? (
-              <p style={{ color: "#6b7280" }}>No templates yet. Create your first one!</p>
+              <p className="text-body-md text-on-surface-variant">No templates yet. Create your first one!</p>
             ) : (
-              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+              <ul className="divide-y divide-outline-variant">
                 {campaigns.map((c) => (
-                  <li key={c.id} style={{ padding: "8px 0", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <li key={c.id} className="py-sm flex items-center justify-between gap-md">
                     <div>
-                      <strong>{c.name}</strong>
-                      <span style={{ marginLeft: "8px", fontSize: "12px", color: "#6b7280" }}>({c.status})</span>
-                      <br />
-                      <span style={{ fontSize: "13px", color: "#6b7280" }}>{c.subject}</span>
+                      <span className="text-body-md font-semibold text-on-surface">{c.name}</span>
+                      <span className="ml-xs text-label-sm text-on-surface-variant">({c.status})</span>
+                      <p className="text-body-sm text-on-surface-variant">{c.subject}</p>
                     </div>
-                    <div style={{ display: "flex", gap: "4px" }}>
+                    <div className="flex gap-xs">
                       <button
                         type="button"
                         onClick={() => handleEdit(c)}
-                        style={{ padding: "4px 8px", fontSize: "12px", border: "1px solid #d1d5db", borderRadius: "4px", cursor: "pointer", backgroundColor: "#fff" }}
+                        className="px-sm py-[4px] text-label-sm font-semibold border border-outline-variant rounded-md hover:bg-surface-container-low transition-colors"
                       >
                         Edit
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDelete(c.id)}
-                        style={{ padding: "4px 8px", fontSize: "12px", border: "1px solid #fca5a5", borderRadius: "4px", cursor: "pointer", backgroundColor: "#fff", color: "#dc2626" }}
+                        className="px-sm py-[4px] text-label-sm font-semibold border border-error-container text-on-error-container rounded-md hover:bg-error-container transition-colors"
                       >
                         Delete
                       </button>
@@ -408,6 +409,6 @@ export default function EmailTemplatesPage() {
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
