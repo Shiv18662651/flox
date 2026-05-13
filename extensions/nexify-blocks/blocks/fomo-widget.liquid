@@ -127,10 +127,10 @@
     if (document.getElementById('nexify-fomo')) return;
 
     var appUrl = '{{ block.settings.app_url | escape }}';
-    var shopId = '{{ block.settings.shop_id | escape }}';
+    var shopDomain = '{{ shop.permanent_domain | escape }}';
     var productId = '{% if product %}{{ product.id }}{% endif %}' || null;
 
-    if (!appUrl || !shopId) return;
+    if (!appUrl || !shopDomain) return;
     appUrl = appUrl.replace(/\/+$/, '');
 
     // Create widget container and inject into body
@@ -138,7 +138,7 @@
     container.id = 'nexify-fomo';
     container.className = 'nexify-fomo nexify-fomo--bottom-left';
     container.setAttribute('data-app-url', appUrl);
-    container.setAttribute('data-shop-id', shopId);
+    container.setAttribute('data-shop-domain', shopDomain);
     if (productId) container.setAttribute('data-product-id', productId);
 
     container.innerHTML =
@@ -263,7 +263,7 @@
       try {
         socket = io(appUrl, {
           path: '/socket.io/',
-          query: { shopId: shopId },
+          query: { shopDomain: shopDomain },
           transports: ['websocket', 'polling'],
           reconnection: true,
           reconnectionAttempts: 5,
@@ -319,7 +319,7 @@
     }
 
     function fetchFomoData() {
-      var url = appUrl + '/api/fomo?shopId=' + encodeURIComponent(shopId);
+      var url = appUrl + '/api/fomo?shopDomain=' + encodeURIComponent(shopDomain);
       if (productId) {
         url += '&productId=' + encodeURIComponent(productId);
       }
@@ -399,13 +399,8 @@
       "type": "text",
       "id": "app_url",
       "label": "App URL",
-      "info": "The URL of your Nexify app (e.g., https://your-app.com)"
-    },
-    {
-      "type": "text",
-      "id": "shop_id",
-      "label": "Shop ID",
-      "info": "Your Nexify shop ID"
+      "info": "The URL of your Nexify app (e.g., https://your-app.com)",
+      "default": "https://thenexify.app"
     }
   ]
 }

@@ -39,10 +39,10 @@
   'use strict';
 
   var appUrl = '{{ block.settings.app_url | escape }}';
-  var shopId = '{{ block.settings.shop_id | escape }}';
+  var shopDomain = '{{ shop.permanent_domain | escape }}';
   var productId = '{% if product %}{{ product.id }}{% endif %}' || null;
 
-  if (!appUrl || !shopId || !productId) return;
+  if (!appUrl || !shopDomain || !productId) return;
   appUrl = appUrl.replace(/\/+$/, '');
 
   // Find all product card links on the page
@@ -67,7 +67,7 @@
   if (window.location.pathname.includes('/products/')) {
     var titleEl = document.querySelector('h1');
     if (titleEl) {
-      fetch(appUrl + '/api/reviews/public?shopId=' + encodeURIComponent(shopId) + '&productId=' + encodeURIComponent(productId) + '&page=1&limit=1')
+      fetch(appUrl + '/api/reviews/public?shopDomain=' + encodeURIComponent(shopDomain) + '&productId=' + encodeURIComponent(productId) + '&page=1&limit=1')
         .then(function(r) { return r.json(); })
         .then(function(data) {
           if (data.totalCount > 0) {
@@ -103,13 +103,8 @@
       "type": "text",
       "id": "app_url",
       "label": "App URL",
-      "info": "The URL of your Nexify app"
-    },
-    {
-      "type": "text",
-      "id": "shop_id",
-      "label": "Shop ID",
-      "info": "Your Nexify shop ID"
+      "info": "The URL of your Nexify app",
+      "default": "https://thenexify.app"
     }
   ]
 }

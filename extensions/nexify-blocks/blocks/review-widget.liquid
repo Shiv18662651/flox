@@ -64,17 +64,17 @@
   if (document.getElementById('nexify-reviews')) return;
 
   var appUrl = '{{ block.settings.app_url | escape }}';
-  var shopId = '{{ block.settings.shop_id | escape }}';
+  var shopDomain = '{{ shop.permanent_domain | escape }}';
   var productId = '{% if product %}{{ product.id }}{% endif %}' || null;
 
-  if (!appUrl || !shopId || !productId) return;
+  if (!appUrl || !shopDomain || !productId) return;
   appUrl = appUrl.replace(/\/+$/, '');
 
   var container = document.createElement('div');
   container.id = 'nexify-reviews';
   container.className = 'nexify-reviews';
   container.setAttribute('data-app-url', appUrl);
-  container.setAttribute('data-shop-id', shopId);
+  container.setAttribute('data-shop-domain', shopDomain);
   container.setAttribute('data-product-id', productId);
   container.innerHTML =
     '<div class="nexify-reviews__header">' +
@@ -131,7 +131,7 @@
 
   function fetchReviews(page) {
     currentPage = page;
-    var url = appUrl + '/api/reviews/public?shopId=' + encodeURIComponent(shopId) + '&productId=' + encodeURIComponent(productId) + '&page=' + page + '&limit=' + REVIEWS_PER_PAGE;
+    var url = appUrl + '/api/reviews/public?shopDomain=' + encodeURIComponent(shopDomain) + '&productId=' + encodeURIComponent(productId) + '&page=' + page + '&limit=' + REVIEWS_PER_PAGE;
     fetch(url)
       .then(function(res) { if (!res.ok) throw new Error('Failed'); return res.json(); })
       .then(function(data) {
@@ -285,13 +285,8 @@
       "type": "text",
       "id": "app_url",
       "label": "App URL",
-      "info": "The URL of your Nexify app (e.g., https://your-app.com)"
-    },
-    {
-      "type": "text",
-      "id": "shop_id",
-      "label": "Shop ID",
-      "info": "Your Nexify shop ID"
+      "info": "The URL of your Nexify app (e.g., https://your-app.com)",
+      "default": "https://thenexify.app"
     }
   ]
 }

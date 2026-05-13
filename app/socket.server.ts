@@ -2,6 +2,7 @@ import { Server as SocketIOServer } from "socket.io";
 import type { Server as HTTPServer } from "http";
 import { createAdapter } from "@socket.io/redis-adapter";
 import { redis } from "~/redis.server";
+import { db } from "~/db.server";
 
 let io: SocketIOServer | null = null;
 
@@ -40,16 +41,23 @@ export function initSocketIO(httpServer: HTTPServer): SocketIOServer {
   }
 
   // Storefront namespace — FOMO popups
-  io.on("connection", (socket) => {
+  io.on("connection", async (socket) => {
     const shopId = socket.handshake.query.shopId as string;
+    const shopDomain = socket.handshake.query.shopDomain as string;
 
-    if (!shopId) {
+    let resolvedShopId = shopId;
+    if (!resolvedShopId && shopDomain) {
+      const shop = await db.shop.findUnique({ where: { shopDomain }, select: { id: true } });
+      if (shop) resolvedShopId = shop.id;
+    }
+
+    if (!resolvedShopId) {
       socket.disconnect();
       return;
     }
 
     // Join the shop's storefront room
-    socket.join(`storefront:${shopId}`);
+    socket.join(`storefront:${resolvedShopId}`);
 
     socket.on("disconnect", () => {
       // Cleanup handled automatically by Socket.io

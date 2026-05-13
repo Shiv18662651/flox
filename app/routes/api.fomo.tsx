@@ -43,14 +43,24 @@ async function getFomoSettings(shopId: string): Promise<FomoSettings> {
 export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
   const shopId = url.searchParams.get("shopId");
+  const shopDomain = url.searchParams.get("shopDomain");
   const productId = url.searchParams.get("productId");
 
-  if (!shopId) {
-    return json({ error: "shopId is required" }, { status: 400 });
+  if (!shopId && !shopDomain) {
+    return json({ error: "shopId or shopDomain is required" }, { status: 400 });
+  }
+
+  // Resolve shop
+  const shop = shopId
+    ? await db.shop.findUnique({ where: { id: shopId }, select: { id: true } })
+    : await db.shop.findUnique({ where: { shopDomain: shopDomain! }, select: { id: true } });
+
+  if (!shop) {
+    return json({ error: "Shop not found" }, { status: 404 });
   }
 
   // Load FOMO settings for this shop
-  const settings = await getFomoSettings(shopId);
+  const settings = await getFomoSettings(shop.id);
 
   // If historical orders are disabled and this is a fallback poll, return empty
   if (!settings.showHistoricalOrders) {
@@ -71,7 +81,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   const recentOrders = await db.webhookEvent.findMany({
     where: {
-      shopId,
+      shopId: shop.id,
       topic: "ORDERS_CREATE",
       status: "processed",
       createdAt: { gte: since },

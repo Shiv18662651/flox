@@ -14,6 +14,7 @@ import { db } from "~/db.server";
 export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
   const shopId = url.searchParams.get("shopId");
+  const shopDomain = url.searchParams.get("shopDomain");
   const productId = url.searchParams.get("productId");
   const page = Math.max(1, parseInt(url.searchParams.get("page") || "1", 10));
   const limit = Math.min(
@@ -21,18 +22,17 @@ export async function loader({ request }: LoaderFunctionArgs) {
     Math.max(1, parseInt(url.searchParams.get("limit") || "10", 10)),
   );
 
-  if (!shopId || !productId) {
+  if ((!shopId && !shopDomain) || !productId) {
     return json(
-      { error: "shopId and productId are required" },
+      { error: "shopId or shopDomain and productId are required" },
       { status: 400 },
     );
   }
 
   // Verify the shop exists and is active
-  const shop = await db.shop.findUnique({
-    where: { id: shopId },
-    select: { id: true, isActive: true },
-  });
+  const shop = shopId
+    ? await db.shop.findUnique({ where: { id: shopId }, select: { id: true, isActive: true } })
+    : await db.shop.findUnique({ where: { shopDomain: shopDomain! }, select: { id: true, isActive: true } });
 
   if (!shop || !shop.isActive) {
     return json({ error: "Shop not found" }, { status: 404 });
@@ -41,7 +41,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   // Get total count of published reviews for this product
   const totalCount = await db.review.count({
     where: {
-      shopId,
+      shopId: shop.id,
       shopifyProductId: productId,
       isPublished: true,
     },
@@ -50,14 +50,14 @@ export async function loader({ request }: LoaderFunctionArgs) {
   // Calculate aggregate rating
   const aggregation = await db.review.aggregate({
     where: {
-      shopId,
+      shopId: shop.id,
       shopifyProductId: productId,
       isPublished: true,
     },
     _avg: { rating: true },
   });
 
-  const averageRating = aggregation._avg.rating
+  const averageRating = aggregation._avg?.rating
     ? Math.round(aggregation._avg.rating * 10) / 10
     : 0;
 
@@ -65,7 +65,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const skip = (page - 1) * limit;
   const reviews = await db.review.findMany({
     where: {
-      shopId,
+      shopId: shop.id,
       shopifyProductId: productId,
       isPublished: true,
     },
