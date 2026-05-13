@@ -208,10 +208,20 @@ export default function FomoSettingsPage() {
     submit(formData, { method: "post" });
   };
 
-  const embedScript = `<script src="https://cdn.yourapp.com/fomo.js"
-  data-shop="{{ shop.permanent_domain }}"
-  async>
-</script>`;
+  const embedSteps = [
+    {
+      title: "Open Theme Editor",
+      desc: "Go to Online Store > Themes > Customize.",
+    },
+    {
+      title: "Enable App Embed",
+      desc: "Click Theme settings (gear icon) > App embeds. Find \"Social Proof Popups\" and toggle it ON.",
+    },
+    {
+      title: "Configure Settings",
+      desc: "Enter your App URL and Shop ID in the embed settings, then save.",
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -390,63 +400,28 @@ export default function FomoSettingsPage() {
               </div>
 
               <div className="space-y-6">
-                {/* Step 1 */}
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary flex items-center justify-center">
-                    <span className="text-on-primary text-label-sm font-bold">1</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-label-md text-on-surface mb-1">Embed Script</p>
-                    <p className="text-body-md text-on-surface-variant mb-3">
-                      Add this snippet just before the closing{" "}
-                      <code className="px-1 py-0.5 rounded bg-surface-container text-on-surface font-mono text-xs">
-                        &lt;/body&gt;
-                      </code>{" "}
-                      tag in your theme's <strong>theme.liquid</strong> file.
-                    </p>
-                    <div className="relative rounded-lg bg-inverse-surface overflow-hidden">
-                      <div className="flex items-center justify-between px-4 py-2 border-b border-white/10">
-                        <span className="text-label-sm text-inverse-on-surface/60 font-mono">theme.liquid</span>
-                        <button
-                          type="button"
-                          onClick={() => navigator.clipboard?.writeText(embedScript)}
-                          className="flex items-center gap-1 text-label-sm text-inverse-on-surface/70 hover:text-inverse-on-surface transition-colors"
-                          aria-label="Copy code"
-                        >
-                          <Icon name="content_copy" size={14} />
-                          Copy
-                        </button>
-                      </div>
-                      <pre className="px-4 py-3 text-xs font-mono text-inverse-on-surface overflow-x-auto leading-relaxed">
-                        {embedScript}
-                      </pre>
+                {embedSteps.map((step, i) => (
+                  <div key={i} className="flex gap-4">
+                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary flex items-center justify-center">
+                      <span className="text-on-primary text-label-sm font-bold">{i + 1}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-label-md text-on-surface mb-1">{step.title}</p>
+                      <p className="text-body-md text-on-surface-variant">{step.desc}</p>
                     </div>
                   </div>
-                </div>
+                ))}
 
                 <div className="border-t border-outline-variant" />
 
-                {/* Step 2 */}
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary flex items-center justify-center">
-                    <span className="text-on-primary text-label-sm font-bold">2</span>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-label-md text-on-surface mb-1">Enable Widget</p>
-                    <p className="text-body-md text-on-surface-variant mb-4">
-                      Toggle the widget active using the button in the page header. The popup will
-                      begin appearing on your storefront immediately after your next page load.
-                    </p>
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-surface-container border border-outline-variant">
-                      <Icon name="check_circle" size={20} className="text-secondary" />
-                      <p className="text-body-md text-on-surface">
-                        Widget is currently{" "}
-                        <span className={`font-semibold ${isActive ? "text-secondary" : "text-on-surface-variant"}`}>
-                          {isActive ? "enabled" : "disabled"}
-                        </span>
-                      </p>
-                    </div>
-                  </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-surface-container border border-outline-variant">
+                  <Icon name="check_circle" size={20} className="text-secondary" />
+                  <p className="text-body-md text-on-surface">
+                    Widget is currently{" "}
+                    <span className={`font-semibold ${isActive ? "text-secondary" : "text-on-surface-variant"}`}>
+                      {isActive ? "enabled" : "disabled"}
+                    </span>
+                  </p>
                 </div>
               </div>
             </div>
@@ -467,7 +442,7 @@ export default function FomoSettingsPage() {
                 </div>
 
                 {/* Mockup Browser */}
-                <div className="relative bg-gradient-to-br from-surface-container to-surface-dim" style={{ minHeight: 320 }}>
+                <div className="relative bg-gradient-to-br from-surface-container to-surface-dim min-h-[320px]">
                   {/* Browser chrome */}
                   <div className="flex items-center gap-1.5 px-3 py-2 bg-surface-container-high border-b border-outline-variant">
                     <span className="w-2.5 h-2.5 rounded-full bg-error/60" />
