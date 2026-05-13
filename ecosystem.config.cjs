@@ -17,7 +17,7 @@
 //   - Sentry captures: unhandled rejections, uncaught exceptions, BullMQ job failures after max retries
 //
 // Usage:
-//   pm2 start ecosystem.config.js
+//   pm2 start ecosystem.config.cjs
 //   pm2 reload shopify-app  # Zero-downtime reload
 //   pm2 logs               # View all logs
 //   pm2 monit              # Real-time monitoring
