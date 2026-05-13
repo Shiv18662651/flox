@@ -29,7 +29,7 @@ module.exports = {
     {
       name: 'shopify-app',
       script: 'build/server/index.js',
-      instances: 1,
+      exec_mode: 'fork',
       exp_backoff_restart_delay: 1000, // Exponential backoff starting at 1s on repeated crashes
       max_restarts: 10,
       min_uptime: '5s', // Process must run at least 5s to be considered started
