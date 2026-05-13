@@ -166,12 +166,22 @@
         clearTimeout(dismissTimer);
         hidePopup();
       });
-      initFomo();
+      applyPosition();
+      startFomo();
     }
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', injectFomo);
     } else {
       injectFomo();
+    }
+
+    function startFomo() {
+      var socketScript = document.createElement('script');
+      socketScript.src = 'https://cdn.socket.io/4.7.5/socket.io.min.js';
+      socketScript.crossOrigin = 'anonymous';
+      socketScript.onload = connectSocket;
+      socketScript.onerror = startPolling;
+      document.head.appendChild(socketScript);
     }
 
     // Widget state
@@ -392,13 +402,6 @@
       }
     }
 
-    // Load Socket.IO then initialize
-    var socketScript = document.createElement('script');
-    socketScript.src = 'https://cdn.socket.io/4.7.5/socket.io.min.js';
-    socketScript.crossOrigin = 'anonymous';
-    socketScript.onload = connectSocket;
-    socketScript.onerror = startPolling;
-    document.head.appendChild(socketScript);
   })();
 </script>
 
