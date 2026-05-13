@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FOMO Embed Test</title>
+  <style>
+    body { font-family: sans-serif; padding: 2rem; }
+    .test-result { padding: 0.5rem 1rem; margin: 0.5rem 0; border-radius: 4px; }
+    .pass { background: #d1fae5; color: #065f46; }
+    .fail { background: #fee2e2; color: #991b1b; }
+  </style>
+</head>
+<body>
+  <h1>FOMO App Embed — Local Test</h1>
+  <div id="results"></div>
+
+  <script>
+    const results = document.getElementById('results');
+    function log(label, passed, detail) {
+      const div = document.createElement('div');
+      div.className = 'test-result ' + (passed ? 'pass' : 'fail');
+      div.textContent = (passed ? 'PASS' : 'FAIL') + ': ' + label + (detail ? ' — ' + detail : '');
+      results.appendChild(div);
+    }
+
+    // Simulate the embed script running
+    (function () {
+      'use strict';
+
+      if (document.getElementById('nexify-fomo')) {
+        log('Double-injection guard', false, 'Widget already exists before test');
+        return;
+      }
+
+      var appUrl = 'https://thenexify.app';
+      var shopId = 'test-shop-123';
+      var productId = null;
+
+      var container = document.createElement('div');
+      container.id = 'nexify-fomo';
+      container.className = 'nexify-fomo nexify-fomo--bottom-left';
+      container.setAttribute('data-app-url', appUrl);
+      container.setAttribute('data-shop-id', shopId);
+
+      container.innerHTML =
+        '<div class="nexify-fomo__popup" id="nexify-fomo-popup" aria-live="polite" role="alert">' +
+          '<button class="nexify-fomo__close" id="nexify-fomo-close" aria-label="Dismiss notification">&times;</button>' +
+          '<div class="nexify-fomo__icon">🛒</div>' +
+          '<div class="nexify-fomo__content">' +
+            '<div class="nexify-fomo__buyer" id="nexify-fomo-buyer"></div>' +
+            '<div class="nexify-fomo__product" id="nexify-fomo-product"></div>' +
+            '<div class="nexify-fomo__time" id="nexify-fomo-time"></div>' +
+          '</div>' +
+        '</div>';
+
+      document.body.appendChild(container);
+
+      log('DOM injection', !!document.getElementById('nexify-fomo'), 'Widget container exists');
+      log('Popup element', !!document.getElementById('nexify-fomo-popup'), 'Popup element exists');
+      log('Close button', !!document.getElementById('nexify-fomo-close'), 'Close button exists');
+      log('Buyer element', !!document.getElementById('nexify-fomo-buyer'), 'Buyer element exists');
+      log('Product element', !!document.getElementById('nexify-fomo-product'), 'Product element exists');
+      log('Time element', !!document.getElementById('nexify-fomo-time'), 'Time element exists');
+
+      var popup = document.getElementById('nexify-fomo-popup');
+      var computed = window.getComputedStyle(popup);
+      log('Popup hidden by default', computed.display === 'none', 'display = ' + computed.display);
+      log('Popup fixed position', container.classList.contains('nexify-fomo'), 'Has nexify-fomo class');
+
+      // Test relativeTime
+      function relativeTime(timestamp) {
+        var now = Date.now();
+        var then = new Date(timestamp).getTime();
+        var diff = Math.max(0, Math.floor((now - then) / 1000));
+        if (diff < 60) return 'just now';
+        if (diff < 3600) {
+          var mins = Math.floor(diff / 60);
+          return mins + (mins === 1 ? ' minute ago' : ' minutes ago');
+        }
+        if (diff < 86400) {
+          var hours = Math.floor(diff / 3600);
+          return hours + (hours === 1 ? ' hour ago' : ' hours ago');
+        }
+        var days = Math.floor(diff / 86400);
+        return days + (days === 1 ? ' day ago' : ' days ago');
+      }
+
+      var rt = relativeTime(Date.now() - 30000);
+      log('relativeTime 30s', rt === 'just now', 'got: ' + rt);
+
+      rt = relativeTime(Date.now() - 120000);
+      log('relativeTime 2m', rt === '2 minutes ago', 'got: ' + rt);
+
+      rt = relativeTime(Date.now() - 7200000);
+      log('relativeTime 2h', rt === '2 hours ago', 'got: ' + rt);
+
+      rt = relativeTime(Date.now() - 172800000);
+      log('relativeTime 2d', rt === '2 days ago', 'got: ' + rt);
+
+      log('data-app-url', container.dataset.appUrl === 'https://thenexify.app', 'url = ' + container.dataset.appUrl);
+      log('data-shop-id', container.dataset.shopId === 'test-shop-123', 'shopId = ' + container.dataset.shopId);
+    })();
+  </script>
+</body>
+</html>

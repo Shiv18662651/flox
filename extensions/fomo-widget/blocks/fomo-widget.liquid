@@ -1,20 +1,8 @@
-<div
-  id="nexify-fomo"
-  class="nexify-fomo"
-  data-app-url="{{ block.settings.app_url }}"
-  data-shop-id="{{ block.settings.shop_id }}"
-  data-product-id="{% if product %}{{ product.id }}{% endif %}"
->
-  <div class="nexify-fomo__popup" id="nexify-fomo-popup" aria-live="polite" role="alert">
-    <button class="nexify-fomo__close" id="nexify-fomo-close" aria-label="Dismiss notification">&times;</button>
-    <div class="nexify-fomo__icon">🛒</div>
-    <div class="nexify-fomo__content">
-      <div class="nexify-fomo__buyer" id="nexify-fomo-buyer"></div>
-      <div class="nexify-fomo__product" id="nexify-fomo-product"></div>
-      <div class="nexify-fomo__time" id="nexify-fomo-time"></div>
-    </div>
-  </div>
-</div>
+{% comment %}
+  Nexify FOMO Widget — App Embed
+  Auto-injects on all pages when enabled in the Shopify theme editor.
+  Target: head (renders in <head>, injects visible widget into <body> via JS)
+{% endcomment %}
 
 <style>
   .nexify-fomo {
@@ -131,13 +119,281 @@
   }
 </style>
 
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
-{{ 'fomo-widget.js' | asset_url | script_tag }}
+<script>
+  (function () {
+    'use strict';
+
+    // Prevent double-injection
+    if (document.getElementById('nexify-fomo')) return;
+
+    var appUrl = '{{ block.settings.app_url | escape }}';
+    var shopId = '{{ block.settings.shop_id | escape }}';
+    var productId = '{% if product %}{{ product.id }}{% endif %}' || null;
+
+    if (!appUrl || !shopId) return;
+    appUrl = appUrl.replace(/\/+$/, '');
+
+    // Create widget container and inject into body
+    var container = document.createElement('div');
+    container.id = 'nexify-fomo';
+    container.className = 'nexify-fomo nexify-fomo--bottom-left';
+    container.setAttribute('data-app-url', appUrl);
+    container.setAttribute('data-shop-id', shopId);
+    if (productId) container.setAttribute('data-product-id', productId);
+
+    container.innerHTML =
+      '<div class="nexify-fomo__popup" id="nexify-fomo-popup" aria-live="polite" role="alert">' +
+        '<button class="nexify-fomo__close" id="nexify-fomo-close" aria-label="Dismiss notification">&times;</button>' +
+        '<div class="nexify-fomo__icon">🛒</div>' +
+        '<div class="nexify-fomo__content">' +
+          '<div class="nexify-fomo__buyer" id="nexify-fomo-buyer"></div>' +
+          '<div class="nexify-fomo__product" id="nexify-fomo-product"></div>' +
+          '<div class="nexify-fomo__time" id="nexify-fomo-time"></div>' +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(container);
+
+    // Widget state
+    var settings = {
+      popupPosition: 'bottom-left',
+      displayDuration: 5,
+      showHistoricalOrders: true,
+      historicalInterval: 10
+    };
+    var popup = document.getElementById('nexify-fomo-popup');
+    var closeBtn = document.getElementById('nexify-fomo-close');
+    var buyerEl = document.getElementById('nexify-fomo-buyer');
+    var productEl = document.getElementById('nexify-fomo-product');
+    var timeEl = document.getElementById('nexify-fomo-time');
+    var dismissTimer = null;
+    var isShowing = false;
+    var eventQueue = [];
+    var socket = null;
+    var pollInterval = null;
+    var historicalOrders = [];
+    var historicalIndex = 0;
+    var historicalTimer = null;
+    var usePolling = false;
+
+    function applyPosition() {
+      container.className = 'nexify-fomo nexify-fomo--' + settings.popupPosition;
+    }
+
+    function relativeTime(timestamp) {
+      var now = Date.now();
+      var then = new Date(timestamp).getTime();
+      var diff = Math.max(0, Math.floor((now - then) / 1000));
+
+      if (diff < 60) return 'just now';
+      if (diff < 3600) {
+        var mins = Math.floor(diff / 60);
+        return mins + (mins === 1 ? ' minute ago' : ' minutes ago');
+      }
+      if (diff < 86400) {
+        var hours = Math.floor(diff / 3600);
+        return hours + (hours === 1 ? ' hour ago' : ' hours ago');
+      }
+      var days = Math.floor(diff / 86400);
+      return days + (days === 1 ? ' day ago' : ' days ago');
+    }
+
+    function showPopup(event) {
+      if (isShowing) {
+        eventQueue.push(event);
+        return;
+      }
+
+      isShowing = true;
+      buyerEl.textContent = (event.buyerName || 'Someone') + ' just purchased';
+      productEl.textContent = event.productTitle || 'a product';
+      timeEl.textContent = relativeTime(event.timestamp);
+
+      popup.style.display = 'flex';
+      popup.offsetHeight; // force reflow
+      popup.classList.add('nexify-fomo__popup--visible');
+      popup.classList.remove('nexify-fomo__popup--hiding');
+
+      clearTimeout(dismissTimer);
+      dismissTimer = setTimeout(function () {
+        hidePopup();
+      }, settings.displayDuration * 1000);
+    }
+
+    function hidePopup() {
+      popup.classList.add('nexify-fomo__popup--hiding');
+      popup.classList.remove('nexify-fomo__popup--visible');
+
+      setTimeout(function () {
+        popup.style.display = 'none';
+        popup.classList.remove('nexify-fomo__popup--hiding');
+        isShowing = false;
+
+        if (eventQueue.length > 0) {
+          var next = eventQueue.shift();
+          setTimeout(function () {
+            showPopup(next);
+          }, 500);
+        }
+      }, 300);
+    }
+
+    closeBtn.addEventListener('click', function () {
+      clearTimeout(dismissTimer);
+      hidePopup();
+    });
+
+    function shouldShowEvent(event) {
+      if (!productId) return true;
+      if (!event.productId) return true;
+      return String(event.productId) === String(productId);
+    }
+
+    function handleFomoEvent(event) {
+      if (!shouldShowEvent(event)) return;
+      showPopup(event);
+    }
+
+    function connectSocket() {
+      if (typeof io === 'undefined') {
+        startPolling();
+        return;
+      }
+
+      try {
+        socket = io(appUrl, {
+          path: '/socket.io/',
+          query: { shopId: shopId },
+          transports: ['websocket', 'polling'],
+          reconnection: true,
+          reconnectionAttempts: 5,
+          reconnectionDelay: 1000,
+          reconnectionDelayMax: 16000
+        });
+
+        socket.on('connect', function () {
+          usePolling = false;
+          stopPolling();
+        });
+
+        socket.on('fomo:purchase', function (event) {
+          handleFomoEvent(event);
+        });
+
+        socket.on('connect_error', function () {
+          if (!usePolling) {
+            usePolling = true;
+            startPolling();
+          }
+        });
+
+        socket.on('disconnect', function (reason) {
+          if (reason === 'io server disconnect' || reason === 'io client disconnect') {
+            usePolling = true;
+            startPolling();
+          }
+        });
+
+        socket.io.on('reconnect_failed', function () {
+          usePolling = true;
+          startPolling();
+        });
+      } catch (e) {
+        startPolling();
+      }
+    }
+
+    function startPolling() {
+      if (pollInterval) return;
+
+      fetchFomoData();
+      pollInterval = setInterval(fetchFomoData, 30000);
+    }
+
+    function stopPolling() {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+      stopHistoricalCycle();
+    }
+
+    function fetchFomoData() {
+      var url = appUrl + '/api/fomo?shopId=' + encodeURIComponent(shopId);
+      if (productId) {
+        url += '&productId=' + encodeURIComponent(productId);
+      }
+
+      fetch(url)
+        .then(function (res) {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.json();
+        })
+        .then(function (data) {
+          if (data.settings) {
+            if (data.settings.popupPosition) settings.popupPosition = data.settings.popupPosition;
+            if (data.settings.displayDuration) settings.displayDuration = data.settings.displayDuration;
+            if (typeof data.settings.showHistoricalOrders !== 'undefined') {
+              settings.showHistoricalOrders = data.settings.showHistoricalOrders;
+            }
+            if (data.settings.historicalInterval) settings.historicalInterval = data.settings.historicalInterval;
+            applyPosition();
+          }
+
+          var orders = data.events || data.orders || [];
+          if (orders.length > 0 && settings.showHistoricalOrders) {
+            historicalOrders = orders;
+            historicalIndex = 0;
+            startHistoricalCycle();
+          }
+        })
+        .catch(function () {
+          // Silently fail — will retry on next poll interval
+        });
+    }
+
+    function startHistoricalCycle() {
+      stopHistoricalCycle();
+      if (historicalOrders.length === 0) return;
+
+      showNextHistorical();
+      historicalTimer = setInterval(function () {
+        showNextHistorical();
+      }, settings.historicalInterval * 1000);
+    }
+
+    function stopHistoricalCycle() {
+      if (historicalTimer) {
+        clearInterval(historicalTimer);
+        historicalTimer = null;
+      }
+    }
+
+    function showNextHistorical() {
+      if (historicalOrders.length === 0) return;
+
+      var order = historicalOrders[historicalIndex];
+      historicalIndex = (historicalIndex + 1) % historicalOrders.length;
+
+      if (shouldShowEvent(order)) {
+        showPopup(order);
+      }
+    }
+
+    // Load Socket.IO then initialize
+    var socketScript = document.createElement('script');
+    socketScript.src = 'https://cdn.socket.io/4.7.5/socket.io.min.js';
+    socketScript.crossOrigin = 'anonymous';
+    socketScript.onload = connectSocket;
+    socketScript.onerror = startPolling;
+    document.head.appendChild(socketScript);
+  })();
+</script>
 
 {% schema %}
 {
   "name": "Social Proof Popups",
-  "target": "section",
+  "target": "head",
   "settings": [
     {
       "type": "text",
