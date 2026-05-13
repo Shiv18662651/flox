@@ -22,15 +22,14 @@
 //   pm2 logs               # View all logs
 //   pm2 monit              # Real-time monitoring
 
-require('dotenv').config()
+require('dotenv').config({ path: require('path').join(__dirname, '.env') })
 
 module.exports = {
   apps: [
     {
       name: 'shopify-app',
       script: 'build/server/index.js',
-      instances: 2,
-      exec_mode: 'cluster',
+      instances: 1,
       exp_backoff_restart_delay: 1000, // Exponential backoff starting at 1s on repeated crashes
       max_restarts: 10,
       min_uptime: '5s', // Process must run at least 5s to be considered started
