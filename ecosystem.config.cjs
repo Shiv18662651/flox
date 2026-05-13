@@ -28,7 +28,8 @@ module.exports = {
   apps: [
     {
       name: 'shopify-app',
-      script: 'build/server/index.js',
+      script: './node_modules/.bin/remix-serve',
+      args: './build/server/index.js',
       exec_mode: 'fork',
       exp_backoff_restart_delay: 1000, // Exponential backoff starting at 1s on repeated crashes
       max_restarts: 10,
