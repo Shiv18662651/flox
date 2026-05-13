@@ -22,6 +22,8 @@
 //   pm2 logs               # View all logs
 //   pm2 monit              # Real-time monitoring
 
+require('dotenv').config()
+
 module.exports = {
   apps: [
     {
