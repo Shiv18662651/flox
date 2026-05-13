@@ -40,6 +40,54 @@ export async function generateSeoMeta(product: {
 }
 
 /**
+ * Generate an AI summary of product reviews.
+ * Returns key themes, pros, cons, and overall sentiment.
+ */
+export async function generateReviewSummary(reviews: Array<{
+  rating: number;
+  title: string | null;
+  body: string | null;
+  verifiedPurchase: boolean;
+}>): Promise<{
+  summary: string;
+  pros: string[];
+  cons: string[];
+  sentiment: "positive" | "neutral" | "negative";
+}> {
+  const reviewTexts = reviews
+    .map((r) => `[${r.rating}/5] ${r.title || ""} ${r.body || ""}`.trim())
+    .join("\n---\n");
+
+  const response = await groq.chat.completions.create({
+    model: MODEL,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a product review analyst. Summarize the provided customer reviews into a concise overall summary (2-3 sentences), a list of top 3 pros, a list of top 3 cons (if any), and an overall sentiment. Return ONLY valid JSON with this exact structure: {\"summary\":\"...\",\"pros\":[\"...\"],\"cons\":[\"...\"],\"sentiment\":\"positive|neutral|negative\"}. If there are no cons, return an empty array.",
+      },
+      { role: "user", content: `Reviews:\n${reviewTexts}` },
+    ],
+    max_tokens: 400,
+    temperature: 0.3,
+  });
+
+  const content = response.choices[0]?.message?.content || "{}";
+  try {
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : content);
+    return {
+      summary: parsed.summary || "No summary available.",
+      pros: Array.isArray(parsed.pros) ? parsed.pros : [],
+      cons: Array.isArray(parsed.cons) ? parsed.cons : [],
+      sentiment: ["positive", "neutral", "negative"].includes(parsed.sentiment) ? parsed.sentiment : "neutral",
+    };
+  } catch {
+    return { summary: "Unable to generate summary.", pros: [], cons: [], sentiment: "neutral" };
+  }
+}
+
+/**
  * Generate descriptive alt text for a product image (accessibility).
  */
 export async function generateAltText(

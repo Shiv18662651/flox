@@ -1,21 +1,8 @@
-<div
-  id="nexify-reviews"
-  class="nexify-reviews"
-  data-app-url="{{ block.settings.app_url }}"
-  data-shop-id="{{ block.settings.shop_id }}"
-  data-product-id="{{ product.id }}"
->
-  <div class="nexify-reviews__header">
-    <h2 class="nexify-reviews__title">Customer Reviews</h2>
-    <div class="nexify-reviews__summary" id="nexify-reviews-summary">
-      <div class="nexify-reviews__loading">Loading reviews...</div>
-    </div>
-  </div>
-
-  <div class="nexify-reviews__list" id="nexify-reviews-list"></div>
-
-  <div class="nexify-reviews__pagination" id="nexify-reviews-pagination"></div>
-</div>
+{% comment %}
+  Nexify Product Reviews — App Embed
+  Auto-injects on all pages when enabled in the Shopify theme editor.
+  Target: head (renders in <head>, injects visible widget into <body> via JS)
+{% endcomment %}
 
 <style>
   .nexify-reviews {
@@ -24,297 +11,287 @@
     padding: 1.5rem;
     font-family: inherit;
   }
-
-  .nexify-reviews__header {
-    margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid #e5e7eb;
-  }
-
-  .nexify-reviews__title {
-    font-size: 1.5rem;
-    font-weight: 600;
-    margin: 0 0 0.75rem 0;
-    color: #111827;
-  }
-
-  .nexify-reviews__summary {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-  }
-
-  .nexify-reviews__aggregate-stars {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-  }
-
-  .nexify-reviews__aggregate-rating {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #111827;
-    margin-right: 0.25rem;
-  }
-
-  .nexify-reviews__total-count {
-    font-size: 0.875rem;
-    color: #6b7280;
-  }
-
-  .nexify-reviews__loading {
-    font-size: 0.875rem;
-    color: #6b7280;
-  }
-
-  .nexify-reviews__empty {
-    text-align: center;
-    padding: 2rem;
-    color: #6b7280;
-    font-size: 0.95rem;
-  }
-
-  /* Individual review card */
-  .nexify-review {
-    padding: 1.25rem 0;
-    border-bottom: 1px solid #f3f4f6;
-  }
-
-  .nexify-review:last-child {
-    border-bottom: none;
-  }
-
-  .nexify-review__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0.5rem;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .nexify-review__meta {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-  }
-
-  .nexify-review__stars {
-    display: flex;
-    gap: 2px;
-  }
-
-  .nexify-review__star {
-    width: 16px;
-    height: 16px;
-  }
-
-  .nexify-review__star--filled {
-    color: #f59e0b;
-  }
-
-  .nexify-review__star--empty {
-    color: #d1d5db;
-  }
-
-  .nexify-review__reviewer {
-    font-weight: 600;
-    font-size: 0.875rem;
-    color: #374151;
-  }
-
-  .nexify-review__badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    font-size: 0.75rem;
-    color: #059669;
-    background: #ecfdf5;
-    padding: 0.125rem 0.5rem;
-    border-radius: 9999px;
-    font-weight: 500;
-  }
-
-  .nexify-review__date {
-    font-size: 0.75rem;
-    color: #9ca3af;
-  }
-
-  .nexify-review__title {
-    font-weight: 600;
-    font-size: 0.95rem;
-    margin: 0.5rem 0 0.25rem;
-    color: #111827;
-  }
-
-  .nexify-review__body {
-    font-size: 0.875rem;
-    line-height: 1.6;
-    color: #4b5563;
-    margin: 0.25rem 0 0.75rem;
-  }
-
-  /* Photo thumbnails */
-  .nexify-review__photos {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    margin-bottom: 0.75rem;
-  }
-
-  .nexify-review__photo {
-    width: 64px;
-    height: 64px;
-    object-fit: cover;
-    border-radius: 0.375rem;
-    border: 1px solid #e5e7eb;
-    cursor: pointer;
-    transition: transform 0.15s ease;
-  }
-
-  .nexify-review__photo:hover {
-    transform: scale(1.05);
-  }
-
-  /* Helpful button */
-  .nexify-review__footer {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .nexify-review__helpful-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    font-size: 0.75rem;
-    color: #6b7280;
-    background: none;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.375rem;
-    padding: 0.375rem 0.75rem;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .nexify-review__helpful-btn:hover {
-    background: #f9fafb;
-    border-color: #d1d5db;
-    color: #374151;
-  }
-
-  .nexify-review__helpful-btn--voted {
-    background: #eff6ff;
-    border-color: #bfdbfe;
-    color: #2563eb;
-    cursor: default;
-  }
-
-  .nexify-review__helpful-count {
-    font-size: 0.75rem;
-    color: #9ca3af;
-  }
-
-  /* Pagination */
-  .nexify-reviews__pagination {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 0.5rem;
-    margin-top: 1.5rem;
-    padding-top: 1rem;
-  }
-
-  .nexify-reviews__page-btn {
-    font-size: 0.875rem;
-    padding: 0.5rem 1rem;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.375rem;
-    background: #fff;
-    color: #374151;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .nexify-reviews__page-btn:hover {
-    background: #f9fafb;
-    border-color: #d1d5db;
-  }
-
-  .nexify-reviews__page-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .nexify-reviews__page-info {
-    font-size: 0.875rem;
-    color: #6b7280;
-  }
-
-  /* Lightbox for photo zoom */
-  .nexify-reviews__lightbox {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-    cursor: pointer;
-  }
-
-  .nexify-reviews__lightbox img {
-    max-width: 90vw;
-    max-height: 90vh;
-    border-radius: 0.5rem;
-  }
-
-  /* Error state */
-  .nexify-reviews__error {
-    text-align: center;
-    padding: 2rem;
-    color: #dc2626;
-    font-size: 0.875rem;
-  }
-
-  /* Responsive */
+  .nexify-reviews__header { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #e5e7eb; }
+  .nexify-reviews__title { font-size: 1.5rem; font-weight: 600; margin: 0 0 0.75rem 0; color: #111827; }
+  .nexify-reviews__summary { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+  .nexify-reviews__aggregate-stars { display: flex; align-items: center; gap: 0.25rem; }
+  .nexify-reviews__aggregate-rating { font-size: 1.25rem; font-weight: 700; color: #111827; margin-right: 0.25rem; }
+  .nexify-reviews__total-count { font-size: 0.875rem; color: #6b7280; }
+  .nexify-reviews__loading { font-size: 0.875rem; color: #6b7280; }
+  .nexify-reviews__empty { text-align: center; padding: 2rem; color: #6b7280; font-size: 0.95rem; }
+  .nexify-review { padding: 1.25rem 0; border-bottom: 1px solid #f3f4f6; }
+  .nexify-review:last-child { border-bottom: none; }
+  .nexify-review__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem; }
+  .nexify-review__meta { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+  .nexify-review__stars { display: flex; gap: 2px; }
+  .nexify-review__star { width: 16px; height: 16px; }
+  .nexify-review__star--filled { color: #f59e0b; }
+  .nexify-review__star--empty { color: #d1d5db; }
+  .nexify-review__reviewer { font-weight: 600; font-size: 0.875rem; color: #374151; }
+  .nexify-review__badge { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; color: #059669; background: #ecfdf5; padding: 0.125rem 0.5rem; border-radius: 9999px; font-weight: 500; }
+  .nexify-review__date { font-size: 0.75rem; color: #9ca3af; }
+  .nexify-review__title { font-weight: 600; font-size: 0.95rem; margin: 0.5rem 0 0.25rem; color: #111827; }
+  .nexify-review__body { font-size: 0.875rem; line-height: 1.6; color: #4b5563; margin: 0.25rem 0 0.75rem; }
+  .nexify-review__photos { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+  .nexify-review__photo { width: 64px; height: 64px; object-fit: cover; border-radius: 0.375rem; border: 1px solid #e5e7eb; cursor: pointer; transition: transform 0.15s ease; }
+  .nexify-review__photo:hover { transform: scale(1.05); }
+  .nexify-review__footer { display: flex; align-items: center; gap: 0.5rem; }
+  .nexify-review__helpful-btn { display: inline-flex; align-items: center; gap: 0.375rem; font-size: 0.75rem; color: #6b7280; background: none; border: 1px solid #e5e7eb; border-radius: 0.375rem; padding: 0.375rem 0.75rem; cursor: pointer; transition: all 0.15s ease; }
+  .nexify-review__helpful-btn:hover { background: #f9fafb; border-color: #d1d5db; color: #374151; }
+  .nexify-review__helpful-btn--voted { background: #eff6ff; border-color: #bfdbfe; color: #2563eb; cursor: default; }
+  .nexify-review__helpful-count { font-size: 0.75rem; color: #9ca3af; }
+  .nexify-reviews__pagination { display: flex; justify-content: center; align-items: center; gap: 0.5rem; margin-top: 1.5rem; padding-top: 1rem; }
+  .nexify-reviews__page-btn { font-size: 0.875rem; padding: 0.5rem 1rem; border: 1px solid #e5e7eb; border-radius: 0.375rem; background: #fff; color: #374151; cursor: pointer; transition: all 0.15s ease; }
+  .nexify-reviews__page-btn:hover { background: #f9fafb; border-color: #d1d5db; }
+  .nexify-reviews__page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .nexify-reviews__page-info { font-size: 0.875rem; color: #6b7280; }
+  .nexify-reviews__lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 9999; cursor: pointer; }
+  .nexify-reviews__lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 0.5rem; }
+  .nexify-reviews__error { text-align: center; padding: 2rem; color: #dc2626; font-size: 0.875rem; }
+  .nexify-review__merchant-reply { margin-top: 0.5rem; padding: 0.75rem; background: #f0fdf4; border-left: 3px solid #059669; border-radius: 0 0.375rem 0.375rem 0; }
+  .nexify-review__merchant-reply-label { font-size: 0.75rem; font-weight: 600; color: #059669; margin-bottom: 0.25rem; }
+  .nexify-review__merchant-reply-text { font-size: 0.875rem; color: #374151; line-height: 1.5; }
   @media (max-width: 640px) {
-    .nexify-reviews {
-      padding: 1rem;
-    }
-
-    .nexify-review__header {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-
-    .nexify-review__photo {
-      width: 56px;
-      height: 56px;
-    }
+    .nexify-reviews { padding: 1rem; }
+    .nexify-review__header { flex-direction: column; align-items: flex-start; }
+    .nexify-review__photo { width: 56px; height: 56px; }
   }
 </style>
+
+<script>
+(function() {
+  'use strict';
+  if (document.getElementById('nexify-reviews')) return;
+
+  var appUrl = '{{ block.settings.app_url | escape }}';
+  var shopId = '{{ block.settings.shop_id | escape }}';
+  var productId = '{% if product %}{{ product.id }}{% endif %}' || null;
+
+  if (!appUrl || !shopId || !productId) return;
+  appUrl = appUrl.replace(/\/+$/, '');
+
+  var container = document.createElement('div');
+  container.id = 'nexify-reviews';
+  container.className = 'nexify-reviews';
+  container.setAttribute('data-app-url', appUrl);
+  container.setAttribute('data-shop-id', shopId);
+  container.setAttribute('data-product-id', productId);
+  container.innerHTML =
+    '<div class="nexify-reviews__header">' +
+      '<h2 class="nexify-reviews__title">Customer Reviews</h2>' +
+      '<div class="nexify-reviews__summary" id="nexify-reviews-summary"><div class="nexify-reviews__loading">Loading reviews...</div></div>' +
+    '</div>' +
+    '<div class="nexify-reviews__list" id="nexify-reviews-list"></div>' +
+    '<div class="nexify-reviews__pagination" id="nexify-reviews-pagination"></div>';
+  document.body.appendChild(container);
+
+  // ── JSON-LD Structured Data for Google Rich Snippets ──
+  function injectJsonLd(data) {
+    var existing = document.getElementById('nexify-review-jsonld');
+    if (existing) existing.remove();
+    if (!data.totalCount) return;
+    var ld = {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      'name': document.querySelector('h1')?.textContent?.trim() || 'Product',
+      'aggregateRating': {
+        '@type': 'AggregateRating',
+        'ratingValue': String(data.averageRating || 0),
+        'reviewCount': String(data.totalCount || 0),
+        'bestRating': '5',
+        'worstRating': '1'
+      }
+    };
+    if (data.reviews && data.reviews.length > 0) {
+      ld.review = data.reviews.slice(0, 5).map(function(r) { return {
+        '@type': 'Review',
+        'author': { '@type': 'Person', 'name': r.reviewerName || 'Anonymous' },
+        'datePublished': r.createdAt,
+        'reviewRating': { '@type': 'Rating', 'ratingValue': String(r.rating), 'bestRating': '5' },
+        'reviewBody': r.body || '',
+        'name': r.title || ''
+      }; });
+    }
+    var script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.id = 'nexify-review-jsonld';
+    script.textContent = JSON.stringify(ld);
+    document.head.appendChild(script);
+  }
+
+  // ── Widget Logic (from review-widget.js) ──
+  const REVIEWS_PER_PAGE = 10;
+  var currentPage = 1;
+  var totalPages = 1;
+  var votedReviews = new Set();
+  try {
+    var stored = localStorage.getItem('nexify_helpful_votes');
+    if (stored) votedReviews = new Set(JSON.parse(stored));
+  } catch (e) {}
+
+  function fetchReviews(page) {
+    currentPage = page;
+    var url = appUrl + '/api/reviews/public?shopId=' + encodeURIComponent(shopId) + '&productId=' + encodeURIComponent(productId) + '&page=' + page + '&limit=' + REVIEWS_PER_PAGE;
+    fetch(url)
+      .then(function(res) { if (!res.ok) throw new Error('Failed'); return res.json(); })
+      .then(function(data) {
+        totalPages = data.totalPages || 1;
+        injectJsonLd(data);
+        renderSummary(data.averageRating, data.totalCount);
+        renderReviews(data.reviews);
+        renderPagination(data.page, data.totalPages);
+      })
+      .catch(function() { showError('Unable to load reviews.'); });
+  }
+
+  function renderSummary(avg, total) {
+    var el = document.getElementById('nexify-reviews-summary');
+    if (!el) return;
+    if (!total) { el.innerHTML = '<span class="nexify-reviews__total-count">No reviews yet</span>'; return; }
+    el.innerHTML = '<span class="nexify-reviews__aggregate-rating">' + (avg || 0).toFixed(1) + '</span>' +
+      '<span class="nexify-reviews__aggregate-stars">' + renderStars(avg || 0) + '</span>' +
+      '<span class="nexify-reviews__total-count">Based on ' + total + (total === 1 ? ' review' : ' reviews') + '</span>';
+  }
+
+  function renderStars(rating) {
+    var html = '';
+    for (var i = 1; i <= 5; i++) {
+      var filled = i <= Math.floor(rating);
+      var half = !filled && (i - 0.5 <= rating);
+      var cls = filled || half ? 'nexify-review__star--filled' : 'nexify-review__star--empty';
+      var fill = half ? 'url(#half-star-' + i + ')' : 'currentColor';
+      html += '<svg class="nexify-review__star ' + cls + '" viewBox="0 0 20 20" fill="' + fill + '">';
+      if (half) html += '<defs><linearGradient id="half-star-' + i + '"><stop offset="50%" stop-color="currentColor"/><stop offset="50%" stop-color="#d1d5db"/></linearGradient></defs>';
+      html += '<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>';
+      html += '</svg>';
+    }
+    return html;
+  }
+
+  function renderReviews(reviews) {
+    var list = document.getElementById('nexify-reviews-list');
+    if (!list) return;
+    if (!reviews || !reviews.length) { list.innerHTML = '<div class="nexify-reviews__empty">No reviews yet. Be the first to leave a review!</div>'; return; }
+    var html = '';
+    for (var i = 0; i < reviews.length; i++) html += renderCard(reviews[i]);
+    list.innerHTML = html;
+    attachEvents(list);
+  }
+
+  function renderCard(r) {
+    var html = '<div class="nexify-review" data-review-id="' + r.id + '">';
+    html += '<div class="nexify-review__header"><div class="nexify-review__meta">';
+    html += '<span class="nexify-review__stars">' + renderStars(r.rating) + '</span>';
+    html += '<span class="nexify-review__reviewer">' + escapeHtml(r.reviewerName) + '</span>';
+    if (r.verifiedPurchase) html += '<span class="nexify-review__badge"><svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Verified Purchase</span>';
+    html += '</div><span class="nexify-review__date">' + formatDate(r.createdAt) + '</span></div>';
+    if (r.title) html += '<div class="nexify-review__title">' + escapeHtml(r.title) + '</div>';
+    if (r.body) html += '<div class="nexify-review__body">' + escapeHtml(r.body) + '</div>';
+    if (r.photos && r.photos.length) {
+      html += '<div class="nexify-review__photos">';
+      for (var j = 0; j < r.photos.length; j++) html += '<img class="nexify-review__photo" src="' + escapeHtml(r.photos[j]) + '" alt="Photo ' + (j+1) + '" loading="lazy"/>';
+      html += '</div>';
+    }
+    if (r.merchantReply) {
+      html += '<div class="nexify-review__merchant-reply"><div class="nexify-review__merchant-reply-label">Merchant Response</div><div class="nexify-review__merchant-reply-text">' + escapeHtml(r.merchantReply) + '</div></div>';
+    }
+    var hasVoted = votedReviews.has(r.id);
+    html += '<div class="nexify-review__footer">';
+    html += '<button class="nexify-review__helpful-btn' + (hasVoted ? ' nexify-review__helpful-btn--voted' : '') + '" data-review-id="' + r.id + '"' + (hasVoted ? ' disabled' : '') + '>';
+    html += '<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" transform="scale(0.83)"/></svg> Helpful</button>';
+    if (r.helpfulCount > 0) html += '<span class="nexify-review__helpful-count">' + r.helpfulCount + (r.helpfulCount === 1 ? ' person' : ' people') + ' found this helpful</span>';
+    html += '</div></div>';
+    return html;
+  }
+
+  function renderPagination(page, total) {
+    var el = document.getElementById('nexify-reviews-pagination');
+    if (!el || total <= 1) { if (el) el.innerHTML = ''; return; }
+    var html = '<button class="nexify-reviews__page-btn" data-page="' + (page-1) + '"' + (page <= 1 ? ' disabled' : '') + '>&laquo; Previous</button>';
+    html += '<span class="nexify-reviews__page-info">Page ' + page + ' of ' + total + '</span>';
+    html += '<button class="nexify-reviews__page-btn" data-page="' + (page+1) + '"' + (page >= total ? ' disabled' : '') + '>Next &raquo;</button>';
+    el.innerHTML = html;
+    var btns = el.querySelectorAll('.nexify-reviews__page-btn');
+    for (var i = 0; i < btns.length; i++) btns[i].addEventListener('click', function(e) {
+      var tp = parseInt(e.currentTarget.dataset.page, 10);
+      if (tp >= 1 && tp <= totalPages) { fetchReviews(tp); container.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    });
+  }
+
+  function attachEvents(list) {
+    var btns = list.querySelectorAll('.nexify-review__helpful-btn');
+    for (var i = 0; i < btns.length; i++) btns[i].addEventListener('click', onHelpful);
+    var photos = list.querySelectorAll('.nexify-review__photo');
+    for (var j = 0; j < photos.length; j++) photos[j].addEventListener('click', onPhoto);
+  }
+
+  function onHelpful(e) {
+    var btn = e.currentTarget;
+    var rid = btn.dataset.reviewId;
+    if (votedReviews.has(rid)) return;
+    btn.disabled = true;
+    btn.classList.add('nexify-review__helpful-btn--voted');
+    fetch(appUrl + '/api/reviews/helpful', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reviewId: rid }) })
+      .then(function(r) { if (r.ok) { votedReviews.add(rid); try { localStorage.setItem('nexify_helpful_votes', JSON.stringify(Array.from(votedReviews))); } catch(e){} } })
+      .catch(function() { btn.disabled = false; btn.classList.remove('nexify-review__helpful-btn--voted'); });
+  }
+
+  function onPhoto(e) {
+    var src = e.currentTarget.src;
+    var lb = document.createElement('div');
+    lb.className = 'nexify-reviews__lightbox';
+    lb.innerHTML = '<img src="' + src + '" alt="Enlarged"/>';
+    lb.addEventListener('click', function() { document.body.removeChild(lb); });
+    document.body.appendChild(lb);
+  }
+
+  function showError(msg) {
+    var list = document.getElementById('nexify-reviews-list');
+    var sum = document.getElementById('nexify-reviews-summary');
+    if (sum) sum.innerHTML = '';
+    if (list) list.innerHTML = '<div class="nexify-reviews__error">' + escapeHtml(msg) + '</div>';
+  }
+
+  function formatDate(iso) {
+    try {
+      var d = new Date(iso);
+      var now = new Date();
+      var diff = Math.floor((now - d) / (1000 * 60 * 60 * 24));
+      if (diff === 0) return 'Today';
+      if (diff === 1) return 'Yesterday';
+      if (diff < 7) return diff + ' days ago';
+      if (diff < 30) return Math.floor(diff / 7) + ' weeks ago';
+      return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    } catch (e) { return ''; }
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    var d = document.createElement('div');
+    d.appendChild(document.createTextNode(str));
+    return d.innerHTML;
+  }
+
+  fetchReviews(1);
+})();
+</script>
 
 {% schema %}
 {
   "name": "Product Reviews",
-  "target": "section",
+  "target": "head",
   "settings": [
     {
       "type": "text",
       "id": "app_url",
       "label": "App URL",
-      "info": "The URL of your Nexify app (e.g., https://your-app.com)",
-      "default": ""
+      "info": "The URL of your Nexify app (e.g., https://your-app.com)"
     },
     {
       "type": "text",
       "id": "shop_id",
       "label": "Shop ID",
-      "info": "Your Nexify shop ID",
-      "default": ""
+      "info": "Your Nexify shop ID"
     }
   ]
 }

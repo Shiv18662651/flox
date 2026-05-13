@@ -77,6 +77,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
       photos: true,
       verifiedPurchase: true,
       helpfulCount: true,
+      merchantReply: true,
+      repliedAt: true,
       createdAt: true,
       customer: {
         select: {
@@ -85,7 +87,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
         },
       },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ isPinned: "desc" as const }, { createdAt: "desc" as const }],
     skip,
     take: limit,
   });
@@ -104,6 +106,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
       review.customer?.firstName,
       review.customer?.lastName,
     ),
+    merchantReply: review.merchantReply,
   }));
 
   const totalPages = Math.ceil(totalCount / limit);

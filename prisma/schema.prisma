@@ -114,6 +114,10 @@ model Review {
   sentiment       String?
   helpfulCount    Int      @default(0)
   orderId         String?
+  merchantReply   String?
+  repliedAt       DateTime?
+  isPinned        Boolean  @default(false)
+  reviewType      String   @default("product")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -122,6 +126,7 @@ model Review {
 
   @@index([shopId])
   @@index([shopifyProductId])
+  @@index([reviewType])
   @@map("reviews")
 }
 
