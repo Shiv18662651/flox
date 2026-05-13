@@ -141,15 +141,6 @@
     container.setAttribute('data-shop-domain', shopDomain);
     if (productId) container.setAttribute('data-product-id', productId);
 
-    function injectFomo() {
-      if (document.body) document.body.appendChild(container);
-    }
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', injectFomo);
-    } else {
-      injectFomo();
-    }
-
     container.innerHTML =
       '<div class="nexify-fomo__popup" id="nexify-fomo-popup" aria-live="polite" role="alert">' +
         '<button class="nexify-fomo__close" id="nexify-fomo-close" aria-label="Dismiss notification">&times;</button>' +
@@ -161,18 +152,35 @@
         '</div>' +
       '</div>';
 
-        // Widget state
+    var popup, closeBtn, buyerEl, productEl, timeEl;
+
+    function injectFomo() {
+      if (!document.body || document.getElementById('nexify-fomo')) return;
+      document.body.appendChild(container);
+      popup = document.getElementById('nexify-fomo-popup');
+      closeBtn = document.getElementById('nexify-fomo-close');
+      buyerEl = document.getElementById('nexify-fomo-buyer');
+      productEl = document.getElementById('nexify-fomo-product');
+      timeEl = document.getElementById('nexify-fomo-time');
+      if (closeBtn) closeBtn.addEventListener('click', function () {
+        clearTimeout(dismissTimer);
+        hidePopup();
+      });
+      initFomo();
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', injectFomo);
+    } else {
+      injectFomo();
+    }
+
+    // Widget state
     var settings = {
       popupPosition: 'bottom-left',
       displayDuration: 5,
       showHistoricalOrders: true,
       historicalInterval: 10
     };
-    var popup = document.getElementById('nexify-fomo-popup');
-    var closeBtn = document.getElementById('nexify-fomo-close');
-    var buyerEl = document.getElementById('nexify-fomo-buyer');
-    var productEl = document.getElementById('nexify-fomo-product');
-    var timeEl = document.getElementById('nexify-fomo-time');
     var dismissTimer = null;
     var isShowing = false;
     var eventQueue = [];
@@ -245,10 +253,7 @@
       }, 300);
     }
 
-    closeBtn.addEventListener('click', function () {
-      clearTimeout(dismissTimer);
-      hidePopup();
-    });
+    // Event listener attached in injectFomo after DOM insertion
 
     function shouldShowEvent(event) {
       if (!productId) return true;

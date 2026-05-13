@@ -46,8 +46,14 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const shopDomain = url.searchParams.get("shopDomain");
   const productId = url.searchParams.get("productId");
 
+  const corsHeaders = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
+
   if (!shopId && !shopDomain) {
-    return json({ error: "shopId or shopDomain is required" }, { status: 400 });
+    return json({ error: "shopId or shopDomain is required" }, { status: 400, headers: corsHeaders });
   }
 
   // Resolve shop
@@ -56,7 +62,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     : await db.shop.findUnique({ where: { shopDomain: shopDomain! }, select: { id: true } });
 
   if (!shop) {
-    return json({ error: "Shop not found" }, { status: 404 });
+    return json({ error: "Shop not found" }, { status: 404, headers: corsHeaders });
   }
 
   // Load FOMO settings for this shop
@@ -117,8 +123,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     { events: filtered, settings },
     {
       headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET",
+        ...corsHeaders,
         "Cache-Control": "public, max-age=30",
       },
     },

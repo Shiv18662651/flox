@@ -84,7 +84,9 @@
     '<div class="nexify-reviews__list" id="nexify-reviews-list"></div>' +
     '<div class="nexify-reviews__pagination" id="nexify-reviews-pagination"></div>';
   function injectReviews() {
-    if (document.body) document.body.appendChild(container);
+    if (!document.body || document.getElementById('nexify-reviews')) return;
+    document.body.appendChild(container);
+    fetchReviews(1);
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', injectReviews);
@@ -100,7 +102,7 @@
     var ld = {
       '@context': 'https://schema.org',
       '@type': 'Product',
-      'name': document.querySelector('h1')?.textContent?.trim() || 'Product',
+      'name': (document.querySelector('h1') && document.querySelector('h1').textContent || '').trim() || 'Product',
       'aggregateRating': {
         '@type': 'AggregateRating',
         'ratingValue': String(data.averageRating || 0),
@@ -279,7 +281,6 @@
     return d.innerHTML;
   }
 
-  fetchReviews(1);
 })();
 </script>
 

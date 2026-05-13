@@ -22,10 +22,16 @@ export async function loader({ request }: LoaderFunctionArgs) {
     Math.max(1, parseInt(url.searchParams.get("limit") || "10", 10)),
   );
 
+  const corsHeaders = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
+
   if ((!shopId && !shopDomain) || !productId) {
     return json(
       { error: "shopId or shopDomain and productId are required" },
-      { status: 400 },
+      { status: 400, headers: corsHeaders },
     );
   }
 
@@ -35,7 +41,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     : await db.shop.findUnique({ where: { shopDomain: shopDomain! }, select: { id: true, isActive: true } });
 
   if (!shop || !shop.isActive) {
-    return json({ error: "Shop not found" }, { status: 404 });
+    return json({ error: "Shop not found" }, { status: 404, headers: corsHeaders });
   }
 
   // Get total count of published reviews for this product
@@ -121,9 +127,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     },
     {
       headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET",
-        "Access-Control-Allow-Headers": "Content-Type",
+        ...corsHeaders,
         "Cache-Control": "public, max-age=60",
       },
     },
