@@ -133,13 +133,22 @@
     if (!appUrl || !shopDomain) return;
     appUrl = appUrl.replace(/\/+$/, '');
 
-    // Create widget container and inject into body
+    // Create widget container and inject into body when ready
     var container = document.createElement('div');
     container.id = 'nexify-fomo';
     container.className = 'nexify-fomo nexify-fomo--bottom-left';
     container.setAttribute('data-app-url', appUrl);
     container.setAttribute('data-shop-domain', shopDomain);
     if (productId) container.setAttribute('data-product-id', productId);
+
+    function injectFomo() {
+      if (document.body) document.body.appendChild(container);
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', injectFomo);
+    } else {
+      injectFomo();
+    }
 
     container.innerHTML =
       '<div class="nexify-fomo__popup" id="nexify-fomo-popup" aria-live="polite" role="alert">' +
@@ -152,9 +161,7 @@
         '</div>' +
       '</div>';
 
-    document.body.appendChild(container);
-
-    // Widget state
+        // Widget state
     var settings = {
       popupPosition: 'bottom-left',
       displayDuration: 5,

@@ -83,7 +83,14 @@
     '</div>' +
     '<div class="nexify-reviews__list" id="nexify-reviews-list"></div>' +
     '<div class="nexify-reviews__pagination" id="nexify-reviews-pagination"></div>';
-  document.body.appendChild(container);
+  function injectReviews() {
+    if (document.body) document.body.appendChild(container);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', injectReviews);
+  } else {
+    injectReviews();
+  }
 
   // ── JSON-LD Structured Data for Google Rich Snippets ──
   function injectJsonLd(data) {
@@ -241,8 +248,8 @@
     var lb = document.createElement('div');
     lb.className = 'nexify-reviews__lightbox';
     lb.innerHTML = '<img src="' + src + '" alt="Enlarged"/>';
-    lb.addEventListener('click', function() { document.body.removeChild(lb); });
-    document.body.appendChild(lb);
+    lb.addEventListener('click', function() { if (lb.parentNode) lb.parentNode.removeChild(lb); });
+    if (document.body) document.body.appendChild(lb);
   }
 
   function showError(msg) {
